@@ -35,10 +35,10 @@ private double totalPaid;
 ```java
 
 // TODO: Constructor
-public String getUserID();
 public String getName();
-public String getEmail();
-public Map<User, Double> getBalanceMap();
+public double getTotalPaid();
+
+public void addPayment(double amount);
 
 public String toString() {
     return this.name;
