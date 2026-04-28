@@ -1,8 +1,9 @@
 package org.model;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class Expense {
+public class Expense implements Serializable {
     /* @Parameters
         - int amount
         - User paidBy

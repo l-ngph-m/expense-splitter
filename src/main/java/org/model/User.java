@@ -1,6 +1,7 @@
 package org.model;
+import java.io.Serializable;
 
-public class User {
+public class User implements Serializable {
     /* @Parameters
         - String name
         - int totalPaid
