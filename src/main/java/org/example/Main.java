@@ -15,8 +15,6 @@ import org.service.DataStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class Main extends Application {
     private Stage stage;
@@ -88,17 +86,10 @@ public class Main extends Application {
             Group g = new Group(name, java.time.LocalDate.now().toString(), false, new ArrayList<>(), new ArrayList<>());
             DataStore.groups.add(g);
             DataStore.saveData();
+            groupListView.getItems().add(name + " (0 members)");
+            groupListView.scrollTo(groupListView.getItems().size() - 1);
+            groupListView.getSelectionModel().select(groupListView.getItems().size() - 1);
             field.clear();
-            
-            new Timer().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    groupListView.getItems().add(name + " (0 members)");
-                    int idx = groupListView.getItems().size() - 1;
-                    groupListView.scrollTo(idx);
-                    groupListView.getSelectionModel().select(idx);
-                }
-            }, 100);
         }
     }
 
@@ -123,17 +114,10 @@ public class Main extends Application {
             User u = new User(name, 0.0);
             currentGroup.addMember(u);
             DataStore.saveData();
+            memberListView.getItems().add(name);
+            memberListView.scrollTo(memberListView.getItems().size() - 1);
+            memberListView.getSelectionModel().select(memberListView.getItems().size() - 1);
             field.clear();
-            
-            new Timer().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    memberListView.getItems().add(name);
-                    int idx = memberListView.getItems().size() - 1;
-                    memberListView.scrollTo(idx);
-                    memberListView.getSelectionModel().select(idx);
-                }
-            }, 100);
         }
     }
 
@@ -148,7 +132,7 @@ public class Main extends Application {
 
     private void addExpense(TextField amountField, ComboBox<String> paidByCombo, TextField categoryField, VBox participantsBox) {
         try {
-            double amount = Double.parseDouble(amountField.getText());
+            int amount = Integer.parseInt(amountField.getText());
             String payerName = paidByCombo.getValue();
             String category = categoryField.getText().trim().isEmpty() ? "Other" : categoryField.getText().trim();
 
@@ -174,19 +158,12 @@ public class Main extends Application {
                 Expense exp = new Expense(amount, payer, participants, category);
                 currentGroup.addExpense(exp);
                 DataStore.saveData();
+                String expenseStr = String.format("%d - %s (%s)", amount, payerName, category);
+                expenseListView.getItems().add(expenseStr);
+                expenseListView.scrollTo(expenseListView.getItems().size() - 1);
+                expenseListView.getSelectionModel().select(expenseListView.getItems().size() - 1);
                 amountField.clear();
                 categoryField.clear();
-                
-                final String expenseStr = String.format("%.2f - %s (%s)", amount, payerName, category);
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        expenseListView.getItems().add(expenseStr);
-                        int idx = expenseListView.getItems().size() - 1;
-                        expenseListView.scrollTo(idx);
-                        expenseListView.getSelectionModel().select(idx);
-                    }
-                }, 100);
             }
         } catch (NumberFormatException ex) {
             Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
@@ -332,7 +309,7 @@ public class Main extends Application {
 
         expenseListView.getItems().clear();
         for (Expense e : currentGroup.getExpenses()) {
-            expenseListView.getItems().add(String.format("%.2f - %s (%s)", 
+            expenseListView.getItems().add(String.format("%d - %s (%s)", 
                     e.getAmount(), e.getPaidBy().getName(), e.getCategory()));
         }
         expenseListView.setPrefHeight(150);
@@ -408,16 +385,16 @@ public class Main extends Application {
         Button backBtn = new Button("Back to Groups");
 
         calcBtn.setOnAction(e -> {
-            Map<User, Double> balances = BillSplitterService.calculateBalances(currentGroup);
+            Map<User, Integer> balances = BillSplitterService.calculateBalances(currentGroup);
             StringBuilder sb = new StringBuilder("Individual Balances:\n\n");
-            for (Map.Entry<User, Double> entry : balances.entrySet()) {
-                sb.append(String.format("%s: %.2f NTD %s\n", 
+            for (Map.Entry<User, Integer> entry : balances.entrySet()) {
+                sb.append(String.format("%s: %d NTD %s\n", 
                         entry.getKey().getName(),
                         entry.getValue(),
                         entry.getValue() >= 0 ? "(is owed)" : "(owes)"));
             }
-            double total = BillSplitterService.getTotalGroupSpent(currentGroup);
-            sb.append(String.format("\nTotal Group Spending: %.2f NTD", total));
+            int total = BillSplitterService.getTotalGroupSpent(currentGroup);
+            sb.append(String.format("\nTotal Group Spending: %d NTD", total));
             balanceTextArea.setText(sb.toString());
         });
         calcBtn.setOnKeyPressed(e -> {
@@ -427,7 +404,7 @@ public class Main extends Application {
         });
 
         simplifyBtn.setOnAction(e -> {
-            Map<User, Double> balances = BillSplitterService.calculateBalances(currentGroup);
+            Map<User, Integer> balances = BillSplitterService.calculateBalances(currentGroup);
             List<String> debts = BillSplitterService.simplifyDebts(balances);
             StringBuilder sb = new StringBuilder("Settlement Plan:\n\n");
             if (debts.isEmpty()) {
