@@ -2,3 +2,5 @@
 AGENTS.md
 .settings/
 target/
+.classpath
+.project
