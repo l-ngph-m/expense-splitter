@@ -1,6 +1,8 @@
 package org.model;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class Expense implements Serializable {
@@ -8,12 +10,14 @@ public class Expense implements Serializable {
     private User paidBy;
     private List<User> participants;
     private String category;
+    private LocalDateTime dateTime;
 
     public Expense(int amount, User paidBy, List<User> participants, String category) {
         this.amount = amount;
         this.paidBy = paidBy;
         this.participants = participants;
         this.category = category;
+        this.dateTime = LocalDateTime.now();
     }
 
     public int getAmount() {
@@ -27,5 +31,11 @@ public class Expense implements Serializable {
     }
     public String getCategory() {
         return category;
+    }
+    public LocalDateTime getDateTime() {
+        return dateTime;
+    }
+    public String getFormattedDateTime() {
+        return dateTime.format(DateTimeFormatter.ofPattern("MM/dd HH:mm"));
     }
 }
