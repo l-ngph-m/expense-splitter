@@ -1,31 +1,26 @@
 package org.model;
+
 import java.io.Serializable;
 
 public class User implements Serializable {
-    /* @Parameters
-        - String name
-        - int totalPaid
-    */
-private String name;
-private int totalPaid;
+    private String name;
+    private double totalPaid;
 
-    // TODO: Constructor
-public User(String name){
-    this.name = name;
-    totalPaid = 0;
-}
 
-// User obj = new User("Alice");
-    // TODO: Getter functions
-public String getName(){
-    return name;
-}
-public int getTotalPaid(){
-    return totalPaid;
-}
-    // TODO: addPayment()
-public void addPayment(int amount){
-    totalPaid += amount;
-}
-}
+    public User(String name, double totalPaid) {
+        this.name = name;
+        this.totalPaid = 0.0;
+    }
 
+    public String getName() {
+        return name;
+    }
+
+    public double getTotalPaid() {
+        return totalPaid;
+    }
+
+    public void addPayment(double amount) {
+        totalPaid += amount;
+    }
+}
