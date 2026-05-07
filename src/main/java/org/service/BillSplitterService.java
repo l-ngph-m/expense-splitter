@@ -1,13 +1,12 @@
 package org.service;
 import org.model.*;
 
-import java.lang.reflect.Member;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class BillSplitterService {
-    public static double getTotalGroupSpent(Group group) {
-        return group.getExpenses().stream().mapToDouble(Expense::getAmount).sum();
+    public static int getTotalGroupSpent(Group group) {
+        return group.getExpenses().stream().mapToInt(Expense::getAmount).sum();
     }
 
     public static Map<String, Double> getCategoryTotal(Group group) {
@@ -19,15 +18,15 @@ public class BillSplitterService {
         );
     }
 
-    public static Map<User, Double> calculateBalances(Group group) {
-        Map<User, Double> balance = new HashMap<>();
+    public static Map<User, Integer> calculateBalances(Group group) {
+        Map<User, Integer> balance = new HashMap<>();
 
         for (User user : group.getMembers()) {
-            balance.put(user, 0.0);
+            balance.put(user, 0);
         }
 
         for (Expense e : group.getExpenses()) {
-            double share = e.getAmount() / e.getParticipants().size();
+            int share = e.getAmount() / e.getParticipants().size();
 
             for (User user : e.getParticipants()) {
                 balance.put(user, balance.get(user) - share);
@@ -40,13 +39,13 @@ public class BillSplitterService {
         return balance;
     }
 
-    public static List<String> simplifyDebts(Map<User, Double> balance) {
+    public static List<String> simplifyDebts(Map<User, Integer> balance) {
         List<String> result = new ArrayList<>();
 
-        List<Map.Entry<User, Double>> debtors = new ArrayList<>();
-        List<Map.Entry<User, Double>> creditors = new ArrayList<>();
+        List<Map.Entry<User, Integer>> debtors = new ArrayList<>();
+        List<Map.Entry<User, Integer>> creditors = new ArrayList<>();
 
-        for (Map.Entry<User, Double> entry : balance.entrySet()) {
+        for (Map.Entry<User, Integer> entry : balance.entrySet()) {
             if (entry.getValue() < -1)
                 debtors.add(new AbstractMap.SimpleEntry<>(entry.getKey(), entry.getValue()));
             else if (entry.getValue() >= 1)
@@ -57,13 +56,13 @@ public class BillSplitterService {
         int creditorIdx = 0;
 
         while (debtorIdx < debtors.size() && creditorIdx < creditors.size()) {
-            Map.Entry<User, Double> d = debtors.get(debtorIdx);
-            Map.Entry<User, Double> c = creditors.get(creditorIdx);
+            Map.Entry<User, Integer> d = debtors.get(debtorIdx);
+            Map.Entry<User, Integer> c = creditors.get(creditorIdx);
 
-            double amount = Math.min(-d.getValue(), c.getValue());
+            int amount = Math.min(-d.getValue(), c.getValue());
 
             if (amount > 0) {
-                result.add(String.format("%s pays %s %f NTD",
+                result.add(String.format("%s pays %s %d NTD",
                         d.getKey().getName(), c.getKey().getName(), amount));
 
                 d.setValue(d.getValue() + amount);
