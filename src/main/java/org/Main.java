@@ -174,7 +174,11 @@ public class Main extends Application {
     private void deleteExpense() {
         int idx = expenseListView.getSelectionModel().getSelectedIndex();
         if (idx >= 0) {
-            currentGroup.getExpenses().remove(idx);
+            List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
+                    .sorted((a, b) -> b.getDateTime().compareTo(a.getDateTime()))
+                    .toList();
+            Expense selected = sortedExpenses.get(idx);
+            currentGroup.getExpenses().remove(selected);
             DataStore.saveData();
             expenseListView.getItems().remove(idx);
         }
@@ -308,9 +312,12 @@ public class Main extends Application {
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
         expenseListView.getItems().clear();
-        for (Expense e : currentGroup.getExpenses()) {
-            expenseListView.getItems().add(String.format("%d - %s (%s)", 
-                    e.getAmount(), e.getPaidBy().getName(), e.getCategory()));
+        List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
+                .sorted((a, b) -> b.getDateTime().compareTo(a.getDateTime()))
+                .toList();
+        for (Expense e : sortedExpenses) {
+            expenseListView.getItems().add(String.format("[%s] %d - %s (%s)", 
+                    e.getFormattedDateTime(), e.getAmount(), e.getPaidBy().getName(), e.getCategory()));
         }
         expenseListView.setPrefHeight(150);
 
