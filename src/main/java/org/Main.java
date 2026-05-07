@@ -34,7 +34,7 @@ public class Main extends Application {
     public void start(Stage stage) {
         this.stage = stage;
         stage.setTitle("Expense Splitter");
-        stage.setWidth(400);
+        stage.setWidth(650);
         stage.setHeight(650);
         stage.setResizable(false);
 
@@ -130,11 +130,12 @@ public class Main extends Application {
         }
     }
 
-    private void addExpense(TextField amountField, ComboBox<String> paidByCombo, TextField categoryField, VBox participantsBox) {
+    private void addExpense(TextField amountField, ComboBox<String> paidByCombo, ComboBox<String> categoryCombo, TextField descriptionField, VBox participantsBox) {
         try {
             int amount = Integer.parseInt(amountField.getText());
             String payerName = paidByCombo.getValue();
-            String category = categoryField.getText().trim().isEmpty() ? "Other" : categoryField.getText().trim();
+            String category = categoryCombo.getValue();
+            String description = descriptionField.getText().trim();
 
             if (payerName == null) {
                 Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
@@ -155,19 +156,30 @@ public class Main extends Application {
             }
 
             if (payer != null && !participants.isEmpty()) {
-                Expense exp = new Expense(amount, payer, participants, category);
+                Expense exp = new Expense(amount, payer, participants, category, description);
                 currentGroup.addExpense(exp);
                 DataStore.saveData();
-                String expenseStr = String.format("%d - %s (%s)", amount, payerName, category);
-                expenseListView.getItems().add(expenseStr);
-                expenseListView.scrollTo(expenseListView.getItems().size() - 1);
-                expenseListView.getSelectionModel().select(expenseListView.getItems().size() - 1);
+                refreshExpenseList();
                 amountField.clear();
-                categoryField.clear();
+                descriptionField.clear();
             }
         } catch (NumberFormatException ex) {
             Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
             alert.showAndWait();
+        }
+    }
+
+    private void refreshExpenseList() {
+        expenseListView.getItems().clear();
+        if (currentGroup != null) {
+            List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
+                    .sorted((a, b) -> b.getDateTime().compareTo(a.getDateTime()))
+                    .toList();
+            for (Expense e : sortedExpenses) {
+                String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
+                expenseListView.getItems().add(String.format("[%s]  %-20s %-10s  %-30s  %s",
+                        e.getFormattedDateTime(), e.getPaidBy().getName(), e.getAmount(), e.getCategory(), desc));
+            }
         }
     }
 
@@ -180,7 +192,7 @@ public class Main extends Application {
             Expense selected = sortedExpenses.get(idx);
             currentGroup.getExpenses().remove(selected);
             DataStore.saveData();
-            expenseListView.getItems().remove(idx);
+            refreshExpenseList();
         }
     }
 
@@ -311,15 +323,8 @@ public class Main extends Application {
         Label title = new Label("Expenses: " + currentGroup.getName());
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        expenseListView.getItems().clear();
-        List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
-                .sorted((a, b) -> b.getDateTime().compareTo(a.getDateTime()))
-                .toList();
-        for (Expense e : sortedExpenses) {
-            expenseListView.getItems().add(String.format("[%s] %d - %s (%s)", 
-                    e.getFormattedDateTime(), e.getAmount(), e.getPaidBy().getName(), e.getCategory()));
-        }
         expenseListView.setPrefHeight(150);
+        refreshExpenseList();
 
         TextField amountField = new TextField();
         amountField.setPromptText("Amount");
@@ -328,8 +333,12 @@ public class Main extends Application {
         paidByCombo.getItems().addAll(currentGroup.getMembers().stream().map(User::getName).toList());
         paidByCombo.setPromptText("Paid by");
 
-        TextField categoryField = new TextField();
-        categoryField.setPromptText("Category (optional)");
+        ComboBox<String> categoryCombo = new ComboBox<>();
+        categoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Other");
+        categoryCombo.setValue("Other");
+
+        TextField descriptionField = new TextField();
+        descriptionField.setPromptText("Description (optional)");
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
@@ -348,9 +357,9 @@ public class Main extends Application {
         Button deleteExpenseBtn = new Button("Delete Expense");
         Button backBtn = new Button("Back to Groups");
 
-        addExpenseBtn.setOnAction(e -> addExpense(amountField, paidByCombo, categoryField, participantsBox));
-        amountField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryField, participantsBox));
-        categoryField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryField, participantsBox));
+        addExpenseBtn.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, participantsBox));
+        amountField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, participantsBox));
+        descriptionField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, participantsBox));
 
         deleteExpenseBtn.setOnAction(e -> deleteExpense());
         deleteExpenseBtn.setOnKeyPressed(e -> {
@@ -362,7 +371,7 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        VBox form = new VBox(10, amountField, paidByCombo, categoryField, participantsBox, addExpenseBtn);
+        VBox form = new VBox(10, amountField, paidByCombo, categoryCombo, descriptionField, participantsBox, addExpenseBtn);
 
         mainContent.getChildren().addAll(title, expenseListView, form, deleteExpenseBtn, backBtn);
     }

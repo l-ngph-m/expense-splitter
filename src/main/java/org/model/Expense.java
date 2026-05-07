@@ -10,13 +10,15 @@ public class Expense implements Serializable {
     private User paidBy;
     private List<User> participants;
     private String category;
+    private String description;
     private LocalDateTime dateTime;
 
-    public Expense(int amount, User paidBy, List<User> participants, String category) {
+    public Expense(int amount, User paidBy, List<User> participants, String category, String description) {
         this.amount = amount;
         this.paidBy = paidBy;
         this.participants = participants;
         this.category = category;
+        this.description = description != null ? description : "";
         this.dateTime = LocalDateTime.now();
     }
 
@@ -31,6 +33,9 @@ public class Expense implements Serializable {
     }
     public String getCategory() {
         return category;
+    }
+    public String getDescription() {
+        return description;
     }
     public LocalDateTime getDateTime() {
         return dateTime;
