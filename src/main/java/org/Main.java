@@ -400,38 +400,14 @@ public class Main extends Application {
         Button simplifyBtn = new Button("Simplify Debts");
         Button backBtn = new Button("Back to Groups");
 
-        calcBtn.setOnAction(e -> {
-            Map<User, Integer> balances = BillSplitterService.calculateBalances(currentGroup);
-            StringBuilder sb = new StringBuilder("Individual Balances:\n\n");
-            for (Map.Entry<User, Integer> entry : balances.entrySet()) {
-                sb.append(String.format("%s: %d NTD %s\n", 
-                        entry.getKey().getName(),
-                        entry.getValue(),
-                        entry.getValue() >= 0 ? "(is owed)" : "(owes)"));
-            }
-            int total = BillSplitterService.getTotalGroupSpent(currentGroup);
-            sb.append(String.format("\nTotal Group Spending: %d NTD", total));
-            balanceTextArea.setText(sb.toString());
-        });
+        calcBtn.setOnAction(e -> calculateBalances(false));
         calcBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 calcBtn.fire();
             }
         });
 
-        simplifyBtn.setOnAction(e -> {
-            Map<User, Integer> balances = BillSplitterService.calculateBalances(currentGroup);
-            List<String> debts = BillSplitterService.simplifyDebts(balances);
-            StringBuilder sb = new StringBuilder("Settlement Plan:\n\n");
-            if (debts.isEmpty()) {
-                sb.append("All settled up!");
-            } else {
-                for (String debt : debts) {
-                    sb.append(debt).append("\n");
-                }
-            }
-            balanceTextArea.setText(sb.toString());
-        });
+        simplifyBtn.setOnAction(e -> calculateBalances(true));
         simplifyBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 simplifyBtn.fire();
@@ -444,5 +420,33 @@ public class Main extends Application {
         });
 
         mainContent.getChildren().addAll(title, balanceTextArea, calcBtn, simplifyBtn, backBtn);
+        calculateBalances(false);
+    }
+
+    private void calculateBalances(boolean simplify) {
+        Map<User, Integer> balances = BillSplitterService.calculateBalances(currentGroup);
+        if (simplify) {
+            List<String> debts = BillSplitterService.simplifyDebts(balances);
+            StringBuilder sb = new StringBuilder("Settlement Plan:\n\n");
+            if (debts.isEmpty()) {
+                sb.append("All settled up!");
+            } else {
+                for (String debt : debts) {
+                    sb.append(debt).append("\n");
+                }
+            }
+            balanceTextArea.setText(sb.toString());
+        } else {
+            StringBuilder sb = new StringBuilder("Individual Balances:\n\n");
+            for (Map.Entry<User, Integer> entry : balances.entrySet()) {
+                sb.append(String.format("%s: %d NTD %s\n",
+                        entry.getKey().getName(),
+                        entry.getValue(),
+                        entry.getValue() >= 0 ? "(is owed)" : "(owes)"));
+            }
+            int total = BillSplitterService.getTotalGroupSpent(currentGroup);
+            sb.append(String.format("\nTotal Group Spending: %d NTD", total));
+            balanceTextArea.setText(sb.toString());
+        }
     }
 }
