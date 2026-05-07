@@ -12,6 +12,7 @@ import org.model.*;
 import org.service.BillSplitterService;
 import org.service.DataStore;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -130,12 +131,13 @@ public class Main extends Application {
         }
     }
 
-    private void addExpense(TextField amountField, ComboBox<String> paidByCombo, ComboBox<String> categoryCombo, TextField descriptionField, VBox participantsBox) {
+    private void addExpense(TextField amountField, ComboBox<String> paidByCombo, ComboBox<String> categoryCombo, TextField descriptionField, DatePicker datePicker, VBox participantsBox) {
         try {
             int amount = Integer.parseInt(amountField.getText());
             String payerName = paidByCombo.getValue();
             String category = categoryCombo.getValue();
             String description = descriptionField.getText().trim();
+            LocalDate expenseDate = datePicker.getValue();
 
             if (payerName == null) {
                 Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
@@ -156,7 +158,7 @@ public class Main extends Application {
             }
 
             if (payer != null && !participants.isEmpty()) {
-                Expense exp = new Expense(amount, payer, participants, category, description);
+                Expense exp = new Expense(amount, payer, participants, category, description, expenseDate);
                 currentGroup.addExpense(exp);
                 DataStore.saveData();
                 refreshExpenseList();
@@ -173,12 +175,12 @@ public class Main extends Application {
         expenseListView.getItems().clear();
         if (currentGroup != null) {
             List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
-                    .sorted((a, b) -> b.getDateTime().compareTo(a.getDateTime()))
+                    .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
                     .toList();
             for (Expense e : sortedExpenses) {
                 String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
-                expenseListView.getItems().add(String.format("[%s]  %-20s %-10s  %-30s  %s",
-                        e.getFormattedDateTime(), e.getPaidBy().getName(), e.getAmount(), e.getCategory(), desc));
+                expenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
+                        e.getFormattedDate(), e.getAmount(), e.getPaidBy().getName(), e.getCategory(), desc));
             }
         }
     }
@@ -187,7 +189,7 @@ public class Main extends Application {
         int idx = expenseListView.getSelectionModel().getSelectedIndex();
         if (idx >= 0) {
             List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
-                    .sorted((a, b) -> b.getDateTime().compareTo(a.getDateTime()))
+                    .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
                     .toList();
             Expense selected = sortedExpenses.get(idx);
             currentGroup.getExpenses().remove(selected);
@@ -326,6 +328,18 @@ public class Main extends Application {
         expenseListView.setPrefHeight(150);
         refreshExpenseList();
 
+        expenseListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            if (e.getClickCount() == 2) {
+                int idx = expenseListView.getSelectionModel().getSelectedIndex();
+                if (idx >= 0) {
+                    List<Expense> sorted = currentGroup.getExpenses().stream()
+                            .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
+                            .toList();
+                    showExpenseDetail(sorted.get(idx));
+                }
+            }
+        });
+
         TextField amountField = new TextField();
         amountField.setPromptText("Amount");
 
@@ -339,6 +353,8 @@ public class Main extends Application {
 
         TextField descriptionField = new TextField();
         descriptionField.setPromptText("Description (optional)");
+
+        DatePicker datePicker = new DatePicker(LocalDate.now());
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
@@ -357,9 +373,9 @@ public class Main extends Application {
         Button deleteExpenseBtn = new Button("Delete Expense");
         Button backBtn = new Button("Back to Groups");
 
-        addExpenseBtn.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, participantsBox));
-        amountField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, participantsBox));
-        descriptionField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, participantsBox));
+        addExpenseBtn.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox));
+        amountField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox));
+        descriptionField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox));
 
         deleteExpenseBtn.setOnAction(e -> deleteExpense());
         deleteExpenseBtn.setOnKeyPressed(e -> {
@@ -371,7 +387,7 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        VBox form = new VBox(10, amountField, paidByCombo, categoryCombo, descriptionField, participantsBox, addExpenseBtn);
+        VBox form = new VBox(10, amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox, addExpenseBtn);
 
         mainContent.getChildren().addAll(title, expenseListView, form, deleteExpenseBtn, backBtn);
     }
@@ -448,5 +464,132 @@ public class Main extends Application {
             sb.append(String.format("\nTotal Group Spending: %d NTD", total));
             balanceTextArea.setText(sb.toString());
         }
+    }
+
+    private void showExpenseDetail(Expense expense) {
+        Stage detailStage = new Stage();
+        detailStage.setTitle("Expense Details");
+        detailStage.setWidth(500);
+        detailStage.setHeight(550);
+
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(15));
+
+        Label titleLabel = new Label("Expense Details");
+        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+        GridPane infoGrid = new GridPane();
+        infoGrid.setHgap(10);
+        infoGrid.setVgap(5);
+        infoGrid.setPadding(new Insets(5));
+
+        infoGrid.add(new Label("Date:"), 0, 0);
+        DatePicker detailDatePicker = new DatePicker(expense.getExpenseDate());
+        infoGrid.add(detailDatePicker, 1, 0);
+
+        infoGrid.add(new Label("Amount:"), 0, 1);
+        TextField detailAmountField = new TextField(String.valueOf(expense.getAmount()));
+        infoGrid.add(detailAmountField, 1, 1);
+
+        infoGrid.add(new Label("Paid By:"), 0, 2);
+        ComboBox<String> detailPaidByCombo = new ComboBox<>();
+        detailPaidByCombo.getItems().addAll(currentGroup.getMembers().stream().map(User::getName).toList());
+        detailPaidByCombo.setValue(expense.getPaidBy().getName());
+        infoGrid.add(detailPaidByCombo, 1, 2);
+
+        infoGrid.add(new Label("Category:"), 0, 3);
+        ComboBox<String> detailCategoryCombo = new ComboBox<>();
+        detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Other");
+        detailCategoryCombo.setValue(expense.getCategory());
+        infoGrid.add(detailCategoryCombo, 1, 3);
+
+        infoGrid.add(new Label("Description:"), 0, 4);
+        TextField detailDescField = new TextField(expense.getDescription());
+        infoGrid.add(detailDescField, 1, 4);
+
+        VBox participantsBox = new VBox(5);
+        participantsBox.setPadding(new Insets(5));
+        participantsBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        Label partLabel = new Label("Participants:");
+        participantsBox.getChildren().add(partLabel);
+
+        for (User u : currentGroup.getMembers()) {
+            CheckBox cb = new CheckBox(u.getName());
+            cb.setId(u.getName());
+            if (expense.getParticipants().contains(u)) cb.setSelected(true);
+            participantsBox.getChildren().add(cb);
+        }
+
+        int share = expense.getAmount() / expense.getParticipants().size();
+        Label breakdownLabel = new Label("Each person charged: " + share + " NTD");
+        breakdownLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+
+        StringBuilder sb = new StringBuilder();
+        for (User u : expense.getParticipants()) {
+            sb.append(String.format("  %s: %d NTD\n", u.getName(), share));
+        }
+        TextArea breakdownArea = new TextArea(sb.toString().trim());
+        breakdownArea.setEditable(false);
+        breakdownArea.setPrefHeight(100);
+
+        HBox buttonRow = new HBox(10);
+        Button saveBtn = new Button("Save");
+        Button deleteBtn = new Button("Delete");
+        Button closeBtn = new Button("Close");
+        buttonRow.getChildren().addAll(saveBtn, deleteBtn, closeBtn);
+
+        saveBtn.setOnAction(e -> {
+            try {
+                int amount = Integer.parseInt(detailAmountField.getText());
+                if (detailPaidByCombo.getValue() == null) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
+                    alert.showAndWait();
+                    return;
+                }
+                User payer = currentGroup.getMembers().stream()
+                        .filter(u -> u.getName().equals(detailPaidByCombo.getValue())).findFirst().orElse(null);
+
+                List<User> participants = new ArrayList<>();
+                for (javafx.scene.Node node : participantsBox.getChildren()) {
+                    if (node instanceof CheckBox cb && cb.isSelected()) {
+                        currentGroup.getMembers().stream()
+                                .filter(u -> u.getName().equals(cb.getId()))
+                                .findFirst().ifPresent(participants::add);
+                    }
+                }
+
+                if (payer != null && !participants.isEmpty()) {
+                    expense.getParticipants().clear();
+                    expense.getParticipants().addAll(participants);
+                    expense.setAmount(amount);
+                    expense.setPaidBy(payer);
+                    expense.setCategory(detailCategoryCombo.getValue());
+                    expense.setDescription(detailDescField.getText().trim());
+                    expense.setExpenseDate(detailDatePicker.getValue());
+                    DataStore.saveData();
+                    refreshExpenseList();
+                    detailStage.close();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Must have a payer and at least one participant");
+                    alert.showAndWait();
+                }
+            } catch (NumberFormatException ex) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
+                alert.showAndWait();
+            }
+        });
+
+        deleteBtn.setOnAction(e -> {
+            currentGroup.getExpenses().remove(expense);
+            DataStore.saveData();
+            refreshExpenseList();
+            detailStage.close();
+        });
+
+        closeBtn.setOnAction(e -> detailStage.close());
+
+        root.getChildren().addAll(titleLabel, infoGrid, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
+        detailStage.setScene(new Scene(root));
+        detailStage.show();
     }
 }
