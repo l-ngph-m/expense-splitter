@@ -4,3 +4,5 @@ AGENTS.md
 target/
 .classpath
 .project
+data.dat
+log.txt
