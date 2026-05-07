@@ -26,10 +26,14 @@ public class BillSplitterService {
         }
 
         for (Expense e : group.getExpenses()) {
+            if (!balance.containsKey(e.getPaidBy())) continue;
+
             int share = e.getAmount() / e.getParticipants().size();
 
             for (User user : e.getParticipants()) {
-                balance.put(user, balance.get(user) - share);
+                if (balance.containsKey(user)) {
+                    balance.put(user, balance.get(user) - share);
+                }
             }
 
             User payer = e.getPaidBy();
