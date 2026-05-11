@@ -283,6 +283,17 @@ public class Main extends Application {
         }
         memberListView.setPrefHeight(200);
 
+        memberListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            if (e.getClickCount() == 2) {
+                String selected = memberListView.getSelectionModel().getSelectedItem();
+                if (selected != null) {
+                    User member = currentGroup.getMembers().stream()
+                            .filter(u -> u.getName().equals(selected)).findFirst().orElse(null);
+                    if (member != null) showMemberDetail(member);
+                }
+            }
+        });
+
         TextField newMemberField = new TextField();
         newMemberField.setPromptText("Member name");
 
@@ -583,6 +594,226 @@ public class Main extends Application {
             currentGroup.getExpenses().remove(expense);
             DataStore.saveData();
             refreshExpenseList();
+            detailStage.close();
+        });
+
+        closeBtn.setOnAction(e -> detailStage.close());
+
+        root.getChildren().addAll(titleLabel, infoGrid, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
+        detailStage.setScene(new Scene(root));
+        detailStage.show();
+    }
+
+    private void showMemberDetail(User member) {
+        Stage detailStage = new Stage();
+        detailStage.setTitle("Member Details: " + member.getName());
+        detailStage.setWidth(600);
+        detailStage.setHeight(600);
+
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(15));
+
+        Label titleLabel = new Label("Expenses: " + member.getName());
+        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+        ListView<String> memberExpenseListView = new ListView<>();
+        memberExpenseListView.setPrefHeight(200);
+
+        Label balanceLabel = new Label();
+        balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+
+        TextArea memberDebtsArea = new TextArea();
+        memberDebtsArea.setEditable(false);
+        memberDebtsArea.setPrefHeight(100);
+
+        Button simplifyBtn = new Button("Simplify Debts");
+
+        Runnable refreshList = () -> {
+            memberExpenseListView.getItems().clear();
+            List<Expense> sorted = currentGroup.getExpenses().stream()
+                    .filter(e -> e.getParticipants().contains(member) || e.getPaidBy().equals(member))
+                    .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
+                    .toList();
+            for (Expense e : sorted) {
+                String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
+                memberExpenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
+                        e.getFormattedDate(), e.getAmount(), e.getPaidBy().getName(), e.getCategory(), desc));
+            }
+        };
+        refreshList.run();
+
+        memberExpenseListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            if (e.getClickCount() == 2) {
+                int idx = memberExpenseListView.getSelectionModel().getSelectedIndex();
+                if (idx >= 0) {
+                    List<Expense> sorted = currentGroup.getExpenses().stream()
+                            .filter(exp -> exp.getParticipants().contains(member) || exp.getPaidBy().equals(member))
+                            .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
+                            .toList();
+                    Expense expense = sorted.get(idx);
+                    Runnable originalRefresh = () -> {
+                        refreshList.run();
+                        updateBalanceLabel(member, balanceLabel, memberDebtsArea, simplifyBtn);
+                    };
+                    showExpenseDetailForExpense(expense, originalRefresh);
+                }
+            }
+        });
+
+        simplifyBtn.setOnAction(e -> {
+            List<String> debts = BillSplitterService.getUserPairwiseDebts(currentGroup, member);
+            StringBuilder sb = new StringBuilder("Pairwise Settlement with " + member.getName() + ":\n\n");
+            if (debts.isEmpty()) {
+                sb.append("All settled up!");
+            } else {
+                for (String debt : debts) {
+                    sb.append(debt).append("\n");
+                }
+            }
+            memberDebtsArea.setText(sb.toString());
+        });
+
+        Button closeBtn = new Button("Close");
+        closeBtn.setOnAction(e -> detailStage.close());
+
+        HBox buttonRow = new HBox(10, simplifyBtn, closeBtn);
+
+        updateBalanceLabel(member, balanceLabel, memberDebtsArea, simplifyBtn);
+
+        root.getChildren().addAll(titleLabel, memberExpenseListView, balanceLabel, memberDebtsArea, buttonRow);
+        detailStage.setScene(new Scene(root));
+        detailStage.show();
+    }
+
+    private void updateBalanceLabel(User member, Label balanceLabel, TextArea debtsArea, Button simplifyBtn) {
+        int balance = BillSplitterService.getUserBalance(currentGroup, member);
+        if (balance >= 0) {
+            balanceLabel.setText(String.format("Total Balance: %d NTD (is owed)", balance));
+            balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: green;");
+        } else {
+            balanceLabel.setText(String.format("Total Balance: %d NTD (owes)", balance));
+            balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: red;");
+        }
+        debtsArea.clear();
+    }
+
+    private void showExpenseDetailForExpense(Expense expense, Runnable onRefresh) {
+        Stage detailStage = new Stage();
+        detailStage.setTitle("Expense Details");
+        detailStage.setWidth(500);
+        detailStage.setHeight(550);
+
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(15));
+
+        Label titleLabel = new Label("Expense Details");
+        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+        GridPane infoGrid = new GridPane();
+        infoGrid.setHgap(10);
+        infoGrid.setVgap(5);
+        infoGrid.setPadding(new Insets(5));
+
+        infoGrid.add(new Label("Date:"), 0, 0);
+        DatePicker detailDatePicker = new DatePicker(expense.getExpenseDate());
+        infoGrid.add(detailDatePicker, 1, 0);
+
+        infoGrid.add(new Label("Amount:"), 0, 1);
+        TextField detailAmountField = new TextField(String.valueOf(expense.getAmount()));
+        infoGrid.add(detailAmountField, 1, 1);
+
+        infoGrid.add(new Label("Paid By:"), 0, 2);
+        ComboBox<String> detailPaidByCombo = new ComboBox<>();
+        detailPaidByCombo.getItems().addAll(currentGroup.getMembers().stream().map(User::getName).toList());
+        detailPaidByCombo.setValue(expense.getPaidBy().getName());
+        infoGrid.add(detailPaidByCombo, 1, 2);
+
+        infoGrid.add(new Label("Category:"), 0, 3);
+        ComboBox<String> detailCategoryCombo = new ComboBox<>();
+        detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Other");
+        detailCategoryCombo.setValue(expense.getCategory());
+        infoGrid.add(detailCategoryCombo, 1, 3);
+
+        infoGrid.add(new Label("Description:"), 0, 4);
+        TextField detailDescField = new TextField(expense.getDescription());
+        infoGrid.add(detailDescField, 1, 4);
+
+        VBox participantsBox = new VBox(5);
+        participantsBox.setPadding(new Insets(5));
+        participantsBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        Label partLabel = new Label("Participants:");
+        participantsBox.getChildren().add(partLabel);
+
+        for (User u : currentGroup.getMembers()) {
+            CheckBox cb = new CheckBox(u.getName());
+            cb.setId(u.getName());
+            if (expense.getParticipants().contains(u)) cb.setSelected(true);
+            participantsBox.getChildren().add(cb);
+        }
+
+        int share = expense.getAmount() / expense.getParticipants().size();
+        Label breakdownLabel = new Label("Each person charged: " + share + " NTD");
+        breakdownLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+
+        StringBuilder sb = new StringBuilder();
+        for (User u : expense.getParticipants()) {
+            sb.append(String.format("  %s: %d NTD\n", u.getName(), share));
+        }
+        TextArea breakdownArea = new TextArea(sb.toString().trim());
+        breakdownArea.setEditable(false);
+        breakdownArea.setPrefHeight(100);
+
+        HBox buttonRow = new HBox(10);
+        Button saveBtn = new Button("Save");
+        Button deleteBtn = new Button("Delete");
+        Button closeBtn = new Button("Close");
+        buttonRow.getChildren().addAll(saveBtn, deleteBtn, closeBtn);
+
+        saveBtn.setOnAction(e -> {
+            try {
+                int amount = Integer.parseInt(detailAmountField.getText());
+                if (detailPaidByCombo.getValue() == null) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
+                    alert.showAndWait();
+                    return;
+                }
+                User payer = currentGroup.getMembers().stream()
+                        .filter(u -> u.getName().equals(detailPaidByCombo.getValue())).findFirst().orElse(null);
+
+                List<User> participants = new ArrayList<>();
+                for (javafx.scene.Node node : participantsBox.getChildren()) {
+                    if (node instanceof CheckBox cb && cb.isSelected()) {
+                        currentGroup.getMembers().stream()
+                                .filter(u -> u.getName().equals(cb.getId()))
+                                .findFirst().ifPresent(participants::add);
+                    }
+                }
+
+                if (payer != null && !participants.isEmpty()) {
+                    expense.getParticipants().clear();
+                    expense.getParticipants().addAll(participants);
+                    expense.setAmount(amount);
+                    expense.setPaidBy(payer);
+                    expense.setCategory(detailCategoryCombo.getValue());
+                    expense.setDescription(detailDescField.getText().trim());
+                    expense.setExpenseDate(detailDatePicker.getValue());
+                    DataStore.saveData();
+                    onRefresh.run();
+                    detailStage.close();
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Must have a payer and at least one participant");
+                    alert.showAndWait();
+                }
+            } catch (NumberFormatException ex) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
+                alert.showAndWait();
+            }
+        });
+
+        deleteBtn.setOnAction(e -> {
+            currentGroup.getExpenses().remove(expense);
+            DataStore.saveData();
+            onRefresh.run();
             detailStage.close();
         });
 
