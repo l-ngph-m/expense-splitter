@@ -425,6 +425,7 @@ public class Main extends Application {
 
         Button calcBtn = new Button("Calculate Balances");
         Button simplifyBtn = new Button("Simplify Debts");
+        Button settleBtn = new Button("Settle Balance");
         Button backBtn = new Button("Back to Groups");
 
         calcBtn.setOnAction(e -> calculateBalances(false));
@@ -441,12 +442,17 @@ public class Main extends Application {
             }
         });
 
+        settleBtn.setOnAction(e -> showSettleDialog());
+        settleBtn.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showSettleDialog();
+        });
+
         backBtn.setOnAction(e -> showGroupsPanel());
         backBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        mainContent.getChildren().addAll(title, balanceTextArea, calcBtn, simplifyBtn, backBtn);
+        mainContent.getChildren().addAll(title, balanceTextArea, calcBtn, simplifyBtn, settleBtn, backBtn);
         calculateBalances(false);
     }
 
@@ -474,6 +480,85 @@ public class Main extends Application {
             int total = BillSplitterService.getTotalGroupSpent(currentGroup);
             sb.append(String.format("\nTotal Group Spending: %d NTD", total));
             balanceTextArea.setText(sb.toString());
+        }
+    }
+
+    private void showSettleDialog() {
+        Stage settleStage = new Stage();
+        settleStage.setTitle("Settle Balance");
+        settleStage.setWidth(350);
+        settleStage.setHeight(250);
+
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(15));
+
+        Label titleLabel = new Label("Record Settlement");
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+        List<String> memberNames = currentGroup.getMembers().stream().map(User::getName).toList();
+
+        ComboBox<String> payerCombo = new ComboBox<>();
+        payerCombo.getItems().addAll(memberNames);
+        payerCombo.setPromptText("Payer");
+
+        ComboBox<String> receiverCombo = new ComboBox<>();
+        receiverCombo.getItems().addAll(memberNames);
+        receiverCombo.setPromptText("Receiver");
+
+        TextField amountField = new TextField();
+        amountField.setPromptText("Amount");
+
+        Button confirmBtn = new Button("Confirm");
+
+        confirmBtn.setOnAction(e -> confirmSettlement(payerCombo, receiverCombo, amountField, settleStage));
+        amountField.setOnAction(e -> confirmSettlement(payerCombo, receiverCombo, amountField, settleStage));
+
+        root.getChildren().addAll(titleLabel, payerCombo, receiverCombo, amountField, confirmBtn);
+        settleStage.setScene(new Scene(root));
+        settleStage.show();
+    }
+
+    private void confirmSettlement(ComboBox<String> payerCombo, ComboBox<String> receiverCombo, TextField amountField, Stage settleStage) {
+        String payerName = payerCombo.getValue();
+        String receiverName = receiverCombo.getValue();
+
+        if (payerName == null || receiverName == null) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please select both payer and receiver");
+            alert.showAndWait();
+            return;
+        }
+
+        if (payerName.equals(receiverName)) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Payer and receiver must be different");
+            alert.showAndWait();
+            return;
+        }
+
+        try {
+            int amount = Integer.parseInt(amountField.getText());
+            if (amount <= 0) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Amount must be positive");
+                alert.showAndWait();
+                return;
+            }
+
+            User payer = currentGroup.getMembers().stream()
+                    .filter(u -> u.getName().equals(payerName)).findFirst().orElse(null);
+            User receiver = currentGroup.getMembers().stream()
+                    .filter(u -> u.getName().equals(receiverName)).findFirst().orElse(null);
+
+            if (payer == null || receiver == null) return;
+
+            Expense settlement = new Expense(amount, payer, new ArrayList<>(List.of(receiver)), "Other", "Settlement", LocalDate.now());
+            currentGroup.addExpense(settlement);
+            DataStore.saveData();
+            refreshExpenseList();
+
+            settleStage.close();
+            calculateBalances(false);
+        } catch (NumberFormatException ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
+            alert.showAndWait();
         }
     }
 
