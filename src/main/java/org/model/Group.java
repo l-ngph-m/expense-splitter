@@ -16,6 +16,9 @@ public class Group implements Serializable {
     public Group(String name, String date, boolean settled, List<User> members, List<Expense> expenses) {
         this.name = name;
         this.date = date;
+        this.settled = settled;
+        this.members = members;
+        this.expenses = expenses;
     }
 
     public void addMember(User user) { members.add(user); }

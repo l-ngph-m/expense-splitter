@@ -14,6 +14,7 @@ import org.service.DataStore;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -132,24 +133,27 @@ public class Main extends Application {
         }
     }
 
-    private void addExpense(TextField amountField, ComboBox<String> paidByCombo, ComboBox<String> categoryCombo, TextField descriptionField, DatePicker datePicker, VBox participantsBox) {
+    private void addExpense(TextField amountField, VBox payerBox, ComboBox<String> categoryCombo, TextField descriptionField, DatePicker datePicker, VBox participantsBox) {
         try {
             int amount = Integer.parseInt(amountField.getText());
-            String payerName = paidByCombo.getValue();
+            if (amount <= 0) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Amount must be positive");
+                alert.showAndWait();
+                return;
+            }
             String category = categoryCombo.getValue();
             String description = descriptionField.getText().trim();
             LocalDate expenseDate = datePicker.getValue();
 
-            if (payerName == null) {
-                Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
+            Map<User, Integer> payerMap = buildPayerMap(payerBox);
+            if (payerMap.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Please select at least one payer");
                 alert.showAndWait();
                 return;
             }
+            if (!validatePayerMap(payerMap, amount)) return;
 
-            User payer = currentGroup.getMembers().stream()
-                    .filter(u -> u.getName().equals(payerName)).findFirst().orElse(null);
-
-            List<User> participants = new ArrayList<>();
+                List<User> participants = new ArrayList<>();
             for (javafx.scene.Node node : participantsBox.getChildren()) {
                 if (node instanceof CheckBox cb && cb.isSelected()) {
                     currentGroup.getMembers().stream()
@@ -158,18 +162,99 @@ public class Main extends Application {
                 }
             }
 
-            if (payer != null && !participants.isEmpty()) {
-                Expense exp = new Expense(amount, payer, participants, category, description, expenseDate);
+            if (!participants.isEmpty()) {
+                Expense exp = new Expense(amount, payerMap, participants, category, description, expenseDate);
                 currentGroup.addExpense(exp);
                 DataStore.saveData();
                 refreshExpenseList();
                 amountField.clear();
                 descriptionField.clear();
+                resetPayerBox(payerBox);
             }
         } catch (NumberFormatException ex) {
             Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
             alert.showAndWait();
         }
+    }
+
+    private Map<User, Integer> buildPayerMap(VBox payerBox) {
+        Map<User, Integer> map = new HashMap<>();
+        for (javafx.scene.Node node : payerBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb && cb.isSelected()) {
+                        String name = cb.getId();
+                        User user = currentGroup.getMembers().stream()
+                                .filter(u -> u.getName().equals(name)).findFirst().orElse(null);
+                        if (user != null) {
+                            int paid = 0;
+                            for (javafx.scene.Node c2 : row.getChildren()) {
+                                if (c2 instanceof TextField tf) {
+                                    try {
+                                        paid = Integer.parseInt(tf.getText());
+                                    } catch (NumberFormatException ignored) {}
+                                }
+                            }
+                            map.put(user, paid);
+                        }
+                    }
+                }
+            }
+        }
+        return map;
+    }
+
+    private boolean validatePayerMap(Map<User, Integer> payerMap, int expectedTotal) {
+        int sum = payerMap.values().stream().mapToInt(Integer::intValue).sum();
+        if (sum != expectedTotal) {
+            Alert alert = new Alert(Alert.AlertType.WARNING,
+                    "Payer amounts sum to " + sum + " NTD, but total expense is " + expectedTotal + " NTD");
+            alert.showAndWait();
+            return false;
+        }
+        return true;
+    }
+
+    private void resetPayerBox(VBox payerBox) {
+        for (javafx.scene.Node node : payerBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb) {
+                        cb.setSelected(false);
+                    } else if (child instanceof TextField tf) {
+                        tf.setText("0");
+                    }
+                }
+            }
+        }
+    }
+
+    private void autoDistribute(VBox payerBox, TextField amountField) {
+        try {
+            int total = Integer.parseInt(amountField.getText());
+            if (total <= 0) return;
+            List<HBox> checkedRows = new ArrayList<>();
+            for (javafx.scene.Node node : payerBox.getChildren()) {
+                if (node instanceof HBox row) {
+                    for (javafx.scene.Node child : row.getChildren()) {
+                        if (child instanceof CheckBox cb && cb.isSelected()) {
+                            checkedRows.add(row);
+                            break;
+                        }
+                    }
+                }
+            }
+            if (checkedRows.isEmpty()) return;
+            int share = total / checkedRows.size();
+            int remainder = total - share * checkedRows.size();
+            for (int i = 0; i < checkedRows.size(); i++) {
+                for (javafx.scene.Node child : checkedRows.get(i).getChildren()) {
+                    if (child instanceof TextField tf) {
+                        tf.setText(String.valueOf(share + (i < remainder ? 1 : 0)));
+                    }
+                }
+            }
+        } catch (NumberFormatException ignored) {}
     }
 
     private void refreshExpenseList() {
@@ -181,7 +266,7 @@ public class Main extends Application {
             for (Expense e : sortedExpenses) {
                 String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
                 expenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
-                        e.getFormattedDate(), e.getAmount(), e.getPaidBy().getName(), e.getCategory(), desc));
+                        e.getFormattedDate(), e.getAmount(), e.getPaidByNames(), e.getCategory(), desc));
             }
         }
     }
@@ -337,7 +422,7 @@ public class Main extends Application {
         Label title = new Label("Expenses: " + currentGroup.getName());
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        expenseListView.setPrefHeight(150);
+        expenseListView.setPrefHeight(250);
         refreshExpenseList();
 
         expenseListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
@@ -355,9 +440,19 @@ public class Main extends Application {
         TextField amountField = new TextField();
         amountField.setPromptText("Amount");
 
-        ComboBox<String> paidByCombo = new ComboBox<>();
-        paidByCombo.getItems().addAll(currentGroup.getMembers().stream().map(User::getName).toList());
-        paidByCombo.setPromptText("Paid by");
+        VBox payerBox = new VBox(5);
+        payerBox.setPadding(new Insets(5));
+        payerBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        Label payerLabel = new Label("Paid by:");
+        payerBox.getChildren().add(payerLabel);
+        for (User u : currentGroup.getMembers()) {
+            CheckBox cb = new CheckBox(u.getName());
+            cb.setId(u.getName());
+            TextField tf = new TextField("0");
+            tf.setPrefWidth(80);
+            HBox row = new HBox(10, cb, tf);
+            payerBox.getChildren().add(row);
+        }
 
         ComboBox<String> categoryCombo = new ComboBox<>();
         categoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Settlement", "Other");
@@ -382,12 +477,25 @@ public class Main extends Application {
         }
 
         Button addExpenseBtn = new Button("Add Expense");
+        Button autoSplitBtn = new Button("Auto Split");
         Button deleteExpenseBtn = new Button("Delete Expense");
         Button backBtn = new Button("Back to Groups");
 
-        addExpenseBtn.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox));
-        amountField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox));
-        descriptionField.setOnAction(e -> addExpense(amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox));
+        addExpenseBtn.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
+        amountField.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
+        descriptionField.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
+
+        autoSplitBtn.setOnAction(e -> autoDistribute(payerBox, amountField));
+
+        for (javafx.scene.Node node : payerBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb) {
+                        cb.selectedProperty().addListener((obs, old, val) -> autoDistribute(payerBox, amountField));
+                    }
+                }
+            }
+        }
 
         deleteExpenseBtn.setOnAction(e -> deleteExpense());
         deleteExpenseBtn.setOnKeyPressed(e -> {
@@ -399,7 +507,7 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        VBox form = new VBox(10, amountField, paidByCombo, categoryCombo, descriptionField, datePicker, participantsBox, addExpenseBtn);
+        VBox form = new VBox(10, amountField, payerBox, autoSplitBtn, categoryCombo, descriptionField, datePicker, participantsBox, addExpenseBtn);
 
         mainContent.getChildren().addAll(title, expenseListView, form, deleteExpenseBtn, backBtn);
     }
@@ -550,7 +658,9 @@ public class Main extends Application {
 
             if (payer == null || receiver == null) return;
 
-            Expense settlement = new Expense(amount, payer, new ArrayList<>(List.of(receiver)), "Settlement", "Settlement", LocalDate.now());
+            Map<User, Integer> payerMap = new HashMap<>();
+            payerMap.put(payer, amount);
+            Expense settlement = new Expense(amount, payerMap, new ArrayList<>(List.of(receiver)), "Settlement", "Settlement", LocalDate.now());
             currentGroup.addExpense(settlement);
             DataStore.saveData();
             refreshExpenseList();
@@ -567,7 +677,7 @@ public class Main extends Application {
         Stage detailStage = new Stage();
         detailStage.setTitle("Expense Details");
         detailStage.setWidth(500);
-        detailStage.setHeight(550);
+        detailStage.setHeight(600);
 
         VBox root = new VBox(10);
         root.setPadding(new Insets(15));
@@ -588,21 +698,31 @@ public class Main extends Application {
         TextField detailAmountField = new TextField(String.valueOf(expense.getAmount()));
         infoGrid.add(detailAmountField, 1, 1);
 
-        infoGrid.add(new Label("Paid By:"), 0, 2);
-        ComboBox<String> detailPaidByCombo = new ComboBox<>();
-        detailPaidByCombo.getItems().addAll(currentGroup.getMembers().stream().map(User::getName).toList());
-        detailPaidByCombo.setValue(expense.getPaidBy().getName());
-        infoGrid.add(detailPaidByCombo, 1, 2);
-
-        infoGrid.add(new Label("Category:"), 0, 3);
+        infoGrid.add(new Label("Category:"), 0, 2);
         ComboBox<String> detailCategoryCombo = new ComboBox<>();
         detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Settlement", "Other");
         detailCategoryCombo.setValue(expense.getCategory());
-        infoGrid.add(detailCategoryCombo, 1, 3);
+        infoGrid.add(detailCategoryCombo, 1, 2);
 
-        infoGrid.add(new Label("Description:"), 0, 4);
+        infoGrid.add(new Label("Description:"), 0, 3);
         TextField detailDescField = new TextField(expense.getDescription());
-        infoGrid.add(detailDescField, 1, 4);
+        infoGrid.add(detailDescField, 1, 3);
+
+        VBox detailPayerBox = new VBox(5);
+        detailPayerBox.setPadding(new Insets(5));
+        detailPayerBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        Label detailPayerLabel = new Label("Paid by:");
+        detailPayerBox.getChildren().add(detailPayerLabel);
+        for (User u : currentGroup.getMembers()) {
+            CheckBox cb = new CheckBox(u.getName());
+            cb.setId(u.getName());
+            Integer paid = expense.getPaidByAmounts().get(u);
+            cb.setSelected(paid != null);
+            TextField tf = new TextField(paid != null ? String.valueOf(paid) : "0");
+            tf.setPrefWidth(80);
+            HBox row = new HBox(10, cb, tf);
+            detailPayerBox.getChildren().add(row);
+        }
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
@@ -638,13 +758,18 @@ public class Main extends Application {
         saveBtn.setOnAction(e -> {
             try {
                 int amount = Integer.parseInt(detailAmountField.getText());
-                if (detailPaidByCombo.getValue() == null) {
-                    Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
+                if (amount <= 0) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Amount must be positive");
                     alert.showAndWait();
                     return;
                 }
-                User payer = currentGroup.getMembers().stream()
-                        .filter(u -> u.getName().equals(detailPaidByCombo.getValue())).findFirst().orElse(null);
+                Map<User, Integer> payerMap = buildPayerMap(detailPayerBox);
+                if (payerMap.isEmpty()) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Please select at least one payer");
+                    alert.showAndWait();
+                    return;
+                }
+                if (!validatePayerMap(payerMap, amount)) return;
 
                 List<User> participants = new ArrayList<>();
                 for (javafx.scene.Node node : participantsBox.getChildren()) {
@@ -655,11 +780,11 @@ public class Main extends Application {
                     }
                 }
 
-                if (payer != null && !participants.isEmpty()) {
+                if (!participants.isEmpty()) {
                     expense.getParticipants().clear();
                     expense.getParticipants().addAll(participants);
                     expense.setAmount(amount);
-                    expense.setPaidBy(payer);
+                    expense.setPaidByAmounts(payerMap);
                     expense.setCategory(detailCategoryCombo.getValue());
                     expense.setDescription(detailDescField.getText().trim());
                     expense.setExpenseDate(detailDatePicker.getValue());
@@ -667,7 +792,7 @@ public class Main extends Application {
                     refreshExpenseList();
                     detailStage.close();
                 } else {
-                    Alert alert = new Alert(Alert.AlertType.WARNING, "Must have a payer and at least one participant");
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Must have at least one participant");
                     alert.showAndWait();
                 }
             } catch (NumberFormatException ex) {
@@ -685,7 +810,7 @@ public class Main extends Application {
 
         closeBtn.setOnAction(e -> detailStage.close());
 
-        root.getChildren().addAll(titleLabel, infoGrid, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
+        root.getChildren().addAll(titleLabel, infoGrid, detailPayerBox, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
         detailStage.setScene(new Scene(root));
         detailStage.show();
     }
@@ -717,13 +842,13 @@ public class Main extends Application {
         Runnable refreshList = () -> {
             memberExpenseListView.getItems().clear();
             List<Expense> sorted = currentGroup.getExpenses().stream()
-                    .filter(e -> e.getParticipants().contains(member) || e.getPaidBy().equals(member))
+                    .filter(e -> e.getParticipants().contains(member) || e.getPaidByAmounts().containsKey(member))
                     .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
                     .toList();
             for (Expense e : sorted) {
                 String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
                 memberExpenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
-                        e.getFormattedDate(), e.getAmount(), e.getPaidBy().getName(), e.getCategory(), desc));
+                        e.getFormattedDate(), e.getAmount(), e.getPaidByNames(), e.getCategory(), desc));
             }
         };
         refreshList.run();
@@ -733,7 +858,7 @@ public class Main extends Application {
                 int idx = memberExpenseListView.getSelectionModel().getSelectedIndex();
                 if (idx >= 0) {
                     List<Expense> sorted = currentGroup.getExpenses().stream()
-                            .filter(exp -> exp.getParticipants().contains(member) || exp.getPaidBy().equals(member))
+                            .filter(exp -> exp.getParticipants().contains(member) || exp.getPaidByAmounts().containsKey(member))
                             .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
                             .toList();
                     Expense expense = sorted.get(idx);
@@ -808,21 +933,31 @@ public class Main extends Application {
         TextField detailAmountField = new TextField(String.valueOf(expense.getAmount()));
         infoGrid.add(detailAmountField, 1, 1);
 
-        infoGrid.add(new Label("Paid By:"), 0, 2);
-        ComboBox<String> detailPaidByCombo = new ComboBox<>();
-        detailPaidByCombo.getItems().addAll(currentGroup.getMembers().stream().map(User::getName).toList());
-        detailPaidByCombo.setValue(expense.getPaidBy().getName());
-        infoGrid.add(detailPaidByCombo, 1, 2);
-
-        infoGrid.add(new Label("Category:"), 0, 3);
+        infoGrid.add(new Label("Category:"), 0, 2);
         ComboBox<String> detailCategoryCombo = new ComboBox<>();
         detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Settlement", "Other");
         detailCategoryCombo.setValue(expense.getCategory());
-        infoGrid.add(detailCategoryCombo, 1, 3);
+        infoGrid.add(detailCategoryCombo, 1, 2);
 
-        infoGrid.add(new Label("Description:"), 0, 4);
+        infoGrid.add(new Label("Description:"), 0, 3);
         TextField detailDescField = new TextField(expense.getDescription());
-        infoGrid.add(detailDescField, 1, 4);
+        infoGrid.add(detailDescField, 1, 3);
+
+        VBox detailPayerBox = new VBox(5);
+        detailPayerBox.setPadding(new Insets(5));
+        detailPayerBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        Label detailPayerLabel = new Label("Paid by:");
+        detailPayerBox.getChildren().add(detailPayerLabel);
+        for (User u : currentGroup.getMembers()) {
+            CheckBox cb = new CheckBox(u.getName());
+            cb.setId(u.getName());
+            Integer paid = expense.getPaidByAmounts().get(u);
+            cb.setSelected(paid != null);
+            TextField tf = new TextField(paid != null ? String.valueOf(paid) : "0");
+            tf.setPrefWidth(80);
+            HBox row = new HBox(10, cb, tf);
+            detailPayerBox.getChildren().add(row);
+        }
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
@@ -858,13 +993,18 @@ public class Main extends Application {
         saveBtn.setOnAction(e -> {
             try {
                 int amount = Integer.parseInt(detailAmountField.getText());
-                if (detailPaidByCombo.getValue() == null) {
-                    Alert alert = new Alert(Alert.AlertType.WARNING, "Please select who paid");
+                if (amount <= 0) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Amount must be positive");
                     alert.showAndWait();
                     return;
                 }
-                User payer = currentGroup.getMembers().stream()
-                        .filter(u -> u.getName().equals(detailPaidByCombo.getValue())).findFirst().orElse(null);
+                Map<User, Integer> payerMap = buildPayerMap(detailPayerBox);
+                if (payerMap.isEmpty()) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Please select at least one payer");
+                    alert.showAndWait();
+                    return;
+                }
+                if (!validatePayerMap(payerMap, amount)) return;
 
                 List<User> participants = new ArrayList<>();
                 for (javafx.scene.Node node : participantsBox.getChildren()) {
@@ -875,11 +1015,11 @@ public class Main extends Application {
                     }
                 }
 
-                if (payer != null && !participants.isEmpty()) {
+                if (!participants.isEmpty()) {
                     expense.getParticipants().clear();
                     expense.getParticipants().addAll(participants);
                     expense.setAmount(amount);
-                    expense.setPaidBy(payer);
+                    expense.setPaidByAmounts(payerMap);
                     expense.setCategory(detailCategoryCombo.getValue());
                     expense.setDescription(detailDescField.getText().trim());
                     expense.setExpenseDate(detailDatePicker.getValue());
@@ -887,7 +1027,7 @@ public class Main extends Application {
                     onRefresh.run();
                     detailStage.close();
                 } else {
-                    Alert alert = new Alert(Alert.AlertType.WARNING, "Must have a payer and at least one participant");
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "Must have at least one participant");
                     alert.showAndWait();
                 }
             } catch (NumberFormatException ex) {
@@ -905,7 +1045,7 @@ public class Main extends Application {
 
         closeBtn.setOnAction(e -> detailStage.close());
 
-        root.getChildren().addAll(titleLabel, infoGrid, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
+        root.getChildren().addAll(titleLabel, infoGrid, detailPayerBox, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
         detailStage.setScene(new Scene(root));
         detailStage.show();
     }

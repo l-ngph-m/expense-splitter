@@ -28,9 +28,7 @@ public class BillSplitterService {
         }
 
         for (Expense e : group.getExpenses()) {
-            if (!balance.containsKey(e.getPaidBy())) continue;
-
-            int share = e.getAmount() / e.getParticipants().size();
+            int share = e.getParticipants().isEmpty() ? 0 : e.getAmount() / e.getParticipants().size();
 
             for (User user : e.getParticipants()) {
                 if (balance.containsKey(user)) {
@@ -38,8 +36,11 @@ public class BillSplitterService {
                 }
             }
 
-            User payer = e.getPaidBy();
-            balance.put(payer, balance.get(payer) + e.getAmount());
+            for (Map.Entry<User, Integer> payer : e.getPaidByAmounts().entrySet()) {
+                if (balance.containsKey(payer.getKey())) {
+                    balance.put(payer.getKey(), balance.get(payer.getKey()) + payer.getValue());
+                }
+            }
         }
 
         return balance;
@@ -92,8 +93,9 @@ public class BillSplitterService {
                 balance -= share;
             }
 
-            if (e.getPaidBy().equals(user)) {
-                balance += e.getAmount();
+            Integer paid = e.getPaidByAmounts().get(user);
+            if (paid != null) {
+                balance += paid;
             }
         }
         return balance;
@@ -109,9 +111,13 @@ public class BillSplitterService {
                 if (e.getParticipants().isEmpty()) continue;
                 int share = e.getAmount() / e.getParticipants().size();
 
-                if (e.getPaidBy().equals(user) && e.getParticipants().contains(other)) {
+                Integer userPaid = e.getPaidByAmounts().get(user);
+                Integer otherPaid = e.getPaidByAmounts().get(other);
+
+                if (userPaid != null && e.getParticipants().contains(other)) {
                     pairwiseBalance += share;
-                } else if (e.getPaidBy().equals(other) && e.getParticipants().contains(user)) {
+                }
+                if (otherPaid != null && e.getParticipants().contains(user)) {
                     pairwiseBalance -= share;
                 }
             }

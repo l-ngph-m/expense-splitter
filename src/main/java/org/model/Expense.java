@@ -4,20 +4,23 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Expense implements Serializable {
     private int amount;
-    private User paidBy;
+    private Map<User, Integer> paidByAmounts;
     private List<User> participants;
     private String category;
     private String description;
     private LocalDate expenseDate;
     private LocalDateTime dateTime;
 
-    public Expense(int amount, User paidBy, List<User> participants, String category, String description, LocalDate expenseDate) {
+    public Expense(int amount, Map<User, Integer> paidByAmounts, List<User> participants, String category, String description, LocalDate expenseDate) {
         this.amount = amount;
-        this.paidBy = paidBy;
+        this.paidByAmounts = paidByAmounts != null ? new HashMap<>(paidByAmounts) : new HashMap<>();
         this.participants = participants;
         this.category = category;
         this.description = description != null ? description : "";
@@ -28,8 +31,11 @@ public class Expense implements Serializable {
     public int getAmount() {
         return amount;
     }
-    public User getPaidBy() {
-        return paidBy;
+    public Map<User, Integer> getPaidByAmounts() {
+        return paidByAmounts;
+    }
+    public String getPaidByNames() {
+        return paidByAmounts.keySet().stream().map(User::getName).collect(Collectors.joining("+"));
     }
     public List<User> getParticipants() {
         return participants;
@@ -46,8 +52,8 @@ public class Expense implements Serializable {
     public void setAmount(int amount) {
         this.amount = amount;
     }
-    public void setPaidBy(User paidBy) {
-        this.paidBy = paidBy;
+    public void setPaidByAmounts(Map<User, Integer> paidByAmounts) {
+        this.paidByAmounts = paidByAmounts != null ? new HashMap<>(paidByAmounts) : new HashMap<>();
     }
     public void setCategory(String category) {
         this.category = category;
