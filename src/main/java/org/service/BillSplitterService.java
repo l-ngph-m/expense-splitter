@@ -99,7 +99,6 @@ public class BillSplitterService {
 
     public static List<String> getUserPairwiseDebts(Group group, User user) {
         List<String> result = new ArrayList<>();
-        int userBalance = getUserBalance(group, user);
 
         for (User other : group.getMembers()) {
             if (other.equals(user)) continue;
@@ -108,14 +107,11 @@ public class BillSplitterService {
                 if (e.getParticipants().isEmpty()) continue;
                 int share = e.getAmount() / e.getParticipants().size();
 
-                boolean userInExpense = e.getParticipants().contains(user);
-                boolean otherInExpense = e.getParticipants().contains(other);
-
-                if (userInExpense) pairwiseBalance -= share;
-                if (otherInExpense) pairwiseBalance += share;
-
-                if (e.getPaidBy().equals(user)) pairwiseBalance += e.getAmount();
-                if (e.getPaidBy().equals(other)) pairwiseBalance -= e.getAmount();
+                if (e.getPaidBy().equals(user) && e.getParticipants().contains(other)) {
+                    pairwiseBalance += share;
+                } else if (e.getPaidBy().equals(other) && e.getParticipants().contains(user)) {
+                    pairwiseBalance -= share;
+                }
             }
 
             if (pairwiseBalance > 0) {
