@@ -359,7 +359,7 @@ public class Main extends Application {
         paidByCombo.setPromptText("Paid by");
 
         ComboBox<String> categoryCombo = new ComboBox<>();
-        categoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Other");
+        categoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Settlement", "Other");
         categoryCombo.setValue("Other");
 
         TextField descriptionField = new TextField();
@@ -549,7 +549,7 @@ public class Main extends Application {
 
             if (payer == null || receiver == null) return;
 
-            Expense settlement = new Expense(amount, payer, new ArrayList<>(List.of(receiver)), "Other", "Settlement", LocalDate.now());
+            Expense settlement = new Expense(amount, payer, new ArrayList<>(List.of(receiver)), "Settlement", "Settlement", LocalDate.now());
             currentGroup.addExpense(settlement);
             DataStore.saveData();
             refreshExpenseList();
@@ -595,7 +595,7 @@ public class Main extends Application {
 
         infoGrid.add(new Label("Category:"), 0, 3);
         ComboBox<String> detailCategoryCombo = new ComboBox<>();
-        detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Other");
+        detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Settlement", "Other");
         detailCategoryCombo.setValue(expense.getCategory());
         infoGrid.add(detailCategoryCombo, 1, 3);
 
@@ -815,7 +815,7 @@ public class Main extends Application {
 
         infoGrid.add(new Label("Category:"), 0, 3);
         ComboBox<String> detailCategoryCombo = new ComboBox<>();
-        detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Other");
+        detailCategoryCombo.getItems().addAll("Food", "Utilities", "Entertainment", "Transportation", "Settlement", "Other");
         detailCategoryCombo.setValue(expense.getCategory());
         infoGrid.add(detailCategoryCombo, 1, 3);
 
