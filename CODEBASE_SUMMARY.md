@@ -89,11 +89,7 @@ Calculates a single member's net balance by scanning all expenses:
 - Subtracts their share from each expense they're a participant in
 - Adds full amount for each expense they paid
 
-#### `getUserPairwiseDebts(Group, User)` → `List<String>`
-Computes pairwise net balance between the given user and every other member:
-- For each other member, scans all expenses involving either user
-- Calculates the net flow between the two
-- Returns strings like `"Bob pays Alice 50 NTD"` or `"Alice pays Bob 30 NTD"`
+*(removed — pairwise debt calculation was removed to simplify the UI)*
 
 ### `DataStore`
 
@@ -141,8 +137,8 @@ Computes pairwise net balance between the given user and every other member:
 | `showExpenseDetail(Expense)` | Popup window with editable fields (date, amount, paid-by, category, description), participant checkboxes, charge breakdown, Save/Delete/Close buttons. Refreshes main expense list after save |
 | `showExpenseDetailForExpense(Expense, Runnable)` | Same as above but accepts a custom refresh callback (used from Member Detail to refresh both the member's filtered list and balance label) |
 | **Member Detail Window (Stage)** | |
-| `showMemberDetail(User)` | Popup window with filtered expense list (only where member is involved), total balance label (green/red), Simplify Debts button (shows pairwise settlement), double-click on expense opens edit window |
-| `updateBalanceLabel(member, label, area, btn)` | Sets balance text + color, clears debts area |
+| `showMemberDetail(User)` | Popup window with filtered expense list (only where member is involved), total balance label (green/red), double-click on expense opens edit window |
+| `updateBalanceLabel(member, label)` | Sets balance text + color |
 
 ---
 

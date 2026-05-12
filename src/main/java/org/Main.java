@@ -833,12 +833,6 @@ public class Main extends Application {
         Label balanceLabel = new Label();
         balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
 
-        TextArea memberDebtsArea = new TextArea();
-        memberDebtsArea.setEditable(false);
-        memberDebtsArea.setPrefHeight(100);
-
-        Button simplifyBtn = new Button("Simplify Debts");
-
         Runnable refreshList = () -> {
             memberExpenseListView.getItems().clear();
             List<Expense> sorted = currentGroup.getExpenses().stream()
@@ -864,39 +858,26 @@ public class Main extends Application {
                     Expense expense = sorted.get(idx);
                     Runnable originalRefresh = () -> {
                         refreshList.run();
-                        updateBalanceLabel(member, balanceLabel, memberDebtsArea, simplifyBtn);
+                        updateBalanceLabel(member, balanceLabel);
                     };
                     showExpenseDetailForExpense(expense, originalRefresh);
                 }
             }
         });
 
-        simplifyBtn.setOnAction(e -> {
-            List<String> debts = BillSplitterService.getUserPairwiseDebts(currentGroup, member);
-            StringBuilder sb = new StringBuilder("Pairwise Settlement with " + member.getName() + ":\n\n");
-            if (debts.isEmpty()) {
-                sb.append("All settled up!");
-            } else {
-                for (String debt : debts) {
-                    sb.append(debt).append("\n");
-                }
-            }
-            memberDebtsArea.setText(sb.toString());
-        });
-
         Button closeBtn = new Button("Close");
         closeBtn.setOnAction(e -> detailStage.close());
 
-        HBox buttonRow = new HBox(10, simplifyBtn, closeBtn);
+        HBox buttonRow = new HBox(10, closeBtn);
 
-        updateBalanceLabel(member, balanceLabel, memberDebtsArea, simplifyBtn);
+        updateBalanceLabel(member, balanceLabel);
 
-        root.getChildren().addAll(titleLabel, memberExpenseListView, balanceLabel, memberDebtsArea, buttonRow);
+        root.getChildren().addAll(titleLabel, memberExpenseListView, balanceLabel, buttonRow);
         detailStage.setScene(new Scene(root));
         detailStage.show();
     }
 
-    private void updateBalanceLabel(User member, Label balanceLabel, TextArea debtsArea, Button simplifyBtn) {
+    private void updateBalanceLabel(User member, Label balanceLabel) {
         int balance = BillSplitterService.getUserBalance(currentGroup, member);
         if (balance >= 0) {
             balanceLabel.setText(String.format("Total Balance: %d NTD (is owed)", balance));
@@ -905,7 +886,6 @@ public class Main extends Application {
             balanceLabel.setText(String.format("Total Balance: %d NTD (owes)", balance));
             balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: red;");
         }
-        debtsArea.clear();
     }
 
     private void showExpenseDetailForExpense(Expense expense, Runnable onRefresh) {
