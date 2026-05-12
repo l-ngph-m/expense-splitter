@@ -6,7 +6,9 @@ import java.util.stream.Collectors;
 
 public class BillSplitterService {
     public static int getTotalGroupSpent(Group group) {
-        return group.getExpenses().stream().mapToInt(Expense::getAmount).sum();
+        return group.getExpenses().stream()
+                .filter(e -> !"Settlement".equals(e.getCategory()))
+                .mapToInt(Expense::getAmount).sum();
     }
 
     public static Map<String, Double> getCategoryTotal(Group group) {
