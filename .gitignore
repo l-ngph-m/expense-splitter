@@ -1,2 +1,8 @@
 *.class
 AGENTS.md
+.settings/
+target/
+.classpath
+.project
+data.dat
+log.txt

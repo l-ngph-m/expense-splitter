@@ -1,15 +1,26 @@
 package org.model;
 
-public class User {
-    /* @Parameters
-        - String name
-        - int totalPaid
-    */
+import java.io.Serializable;
 
-    // TODO: Constructor
+public class User implements Serializable {
+    private String name;
+    private double totalPaid;
 
-    // TODO: Getter functions
 
-    // TODO: addPayment()
+    public User(String name, double totalPaid) {
+        this.name = name;
+        this.totalPaid = 0.0;
+    }
 
+    public String getName() {
+        return name;
+    }
+
+    public double getTotalPaid() {
+        return totalPaid;
+    }
+
+    public void addPayment(double amount) {
+        totalPaid += amount;
+    }
 }
