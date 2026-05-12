@@ -37,7 +37,8 @@ public class Main extends Application {
         stage.setTitle("Expense Splitter");
         stage.setWidth(650);
         stage.setHeight(650);
-        stage.setResizable(false);
+        stage.setMinWidth(650);
+        stage.setMinHeight(650);
 
         DataStore.loadData();
 
@@ -786,7 +787,7 @@ public class Main extends Application {
         Stage detailStage = new Stage();
         detailStage.setTitle("Expense Details");
         detailStage.setWidth(500);
-        detailStage.setHeight(550);
+        detailStage.setHeight(600);
 
         VBox root = new VBox(10);
         root.setPadding(new Insets(15));
