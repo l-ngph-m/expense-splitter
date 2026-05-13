@@ -63,8 +63,13 @@ public class Main extends Application {
         mainContent = new VBox(10);
         mainContent.setPadding(new Insets(10));
 
+        ScrollPane scrollPane = new ScrollPane(mainContent);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
         root.setLeft(leftNav);
-        root.setCenter(mainContent);
+        root.setCenter(scrollPane);
+        root.setStyle("-fx-font-size: 14px;");
 
         stage.setScene(new Scene(root));
         stage.show();
@@ -288,13 +293,14 @@ public class Main extends Application {
         mainContent.getChildren().clear();
 
         Label title = new Label("Groups");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         groupListView.getItems().clear();
         for (Group g : DataStore.groups) {
             groupListView.getItems().add(g.getName() + " (" + g.getMembers().size() + " members)");
         }
         groupListView.setPrefHeight(200);
+        groupListView.setStyle("-fx-font-size: 16px;");
 
         groupListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
@@ -305,7 +311,7 @@ public class Main extends Application {
             }
         });
 
-        groupListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+        groupListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && currentGroup != null) {
                 showMembersPanel();
             }
@@ -361,15 +367,16 @@ public class Main extends Application {
         }
 
         Label title = new Label("Members: " + currentGroup.getName());
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         memberListView.getItems().clear();
         for (User u : currentGroup.getMembers()) {
             memberListView.getItems().add(u.getName());
         }
         memberListView.setPrefHeight(200);
+        memberListView.setStyle("-fx-font-size: 16px;");
 
-        memberListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+        memberListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
                 String selected = memberListView.getSelectionModel().getSelectedItem();
                 if (selected != null) {
@@ -420,12 +427,13 @@ public class Main extends Application {
         }
 
         Label title = new Label("Expenses: " + currentGroup.getName());
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         expenseListView.setPrefHeight(250);
+        expenseListView.setStyle("-fx-font-size: 16px;");
         refreshExpenseList();
 
-        expenseListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+        expenseListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
                 int idx = expenseListView.getSelectionModel().getSelectedIndex();
                 if (idx >= 0) {
@@ -527,7 +535,7 @@ public class Main extends Application {
         }
 
         Label title = new Label("Balances: " + currentGroup.getName());
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         balanceTextArea.setEditable(false);
         balanceTextArea.setPrefHeight(200);
@@ -602,7 +610,7 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Record Settlement");
-        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
         List<String> memberNames = currentGroup.getMembers().stream().map(User::getName).toList();
 
@@ -683,7 +691,7 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Expense Details");
-        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         GridPane infoGrid = new GridPane();
         infoGrid.setHgap(10);
@@ -739,7 +747,7 @@ public class Main extends Application {
 
         int share = expense.getAmount() / expense.getParticipants().size();
         Label breakdownLabel = new Label("Each person charged: " + share + " NTD");
-        breakdownLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        breakdownLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         StringBuilder sb = new StringBuilder();
         for (User u : expense.getParticipants()) {
@@ -811,7 +819,10 @@ public class Main extends Application {
         closeBtn.setOnAction(e -> detailStage.close());
 
         root.getChildren().addAll(titleLabel, infoGrid, detailPayerBox, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
-        detailStage.setScene(new Scene(root));
+        ScrollPane detailScroll = new ScrollPane(root);
+        detailScroll.setFitToWidth(true);
+        detailScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        detailStage.setScene(new Scene(detailScroll));
         detailStage.show();
     }
 
@@ -825,13 +836,14 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Expenses: " + member.getName());
-        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         ListView<String> memberExpenseListView = new ListView<>();
         memberExpenseListView.setPrefHeight(200);
+        memberExpenseListView.setStyle("-fx-font-size: 16px;");
 
         Label balanceLabel = new Label();
-        balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         Runnable refreshList = () -> {
             memberExpenseListView.getItems().clear();
@@ -881,10 +893,10 @@ public class Main extends Application {
         int balance = BillSplitterService.getUserBalance(currentGroup, member);
         if (balance >= 0) {
             balanceLabel.setText(String.format("Total Balance: %d NTD (is owed)", balance));
-            balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: green;");
+            balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: green;");
         } else {
             balanceLabel.setText(String.format("Total Balance: %d NTD (owes)", balance));
-            balanceLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: red;");
+            balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: red;");
         }
     }
 
@@ -898,7 +910,7 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Expense Details");
-        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
         GridPane infoGrid = new GridPane();
         infoGrid.setHgap(10);
@@ -954,7 +966,7 @@ public class Main extends Application {
 
         int share = expense.getAmount() / expense.getParticipants().size();
         Label breakdownLabel = new Label("Each person charged: " + share + " NTD");
-        breakdownLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        breakdownLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         StringBuilder sb = new StringBuilder();
         for (User u : expense.getParticipants()) {
@@ -1026,7 +1038,10 @@ public class Main extends Application {
         closeBtn.setOnAction(e -> detailStage.close());
 
         root.getChildren().addAll(titleLabel, infoGrid, detailPayerBox, new Label("Charge Breakdown:"), breakdownLabel, breakdownArea, participantsBox, buttonRow);
-        detailStage.setScene(new Scene(root));
+        ScrollPane detailScroll = new ScrollPane(root);
+        detailScroll.setFitToWidth(true);
+        detailScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        detailStage.setScene(new Scene(detailScroll));
         detailStage.show();
     }
 }
