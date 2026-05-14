@@ -863,12 +863,42 @@ public class Main extends Application {
         Label balanceLabel = new Label();
         balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
+        TextArea memberSpendingArea = new TextArea();
+        memberSpendingArea.setEditable(false);
+        memberSpendingArea.setPrefHeight(120);
+
         Runnable refreshList = () -> {
             memberExpenseListView.getItems().clear();
             List<Expense> sorted = currentGroup.getExpenses().stream()
                     .filter(e -> e.getParticipants().contains(member) || e.getPaidByAmounts().containsKey(member))
                     .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
                     .toList();
+
+            int totalShare = 0;
+            Map<String, Integer> catShare = new java.util.HashMap<>();
+            for (Expense e : sorted) {
+                if (!e.getParticipants().contains(member) || e.getParticipants().isEmpty()) continue;
+                int share = e.getAmount() / e.getParticipants().size();
+                totalShare += share;
+                catShare.merge(e.getCategory(), share, Integer::sum);
+            }
+
+            int totalPaid = 0;
+            for (Expense e : sorted) {
+                Integer paid = e.getPaidByAmounts().get(member);
+                if (paid != null) totalPaid += paid;
+            }
+
+            StringBuilder spendingSb = new StringBuilder("Spending Summary:\n");
+            spendingSb.append(String.format("  Total Share: %d NTD\n", totalShare));
+            spendingSb.append(String.format("  Has Paid: %d NTD\n", totalPaid));
+            spendingSb.append("  Per Category:\n");
+            for (Map.Entry<String, Integer> cat : catShare.entrySet()) {
+                if ("Settlement".equals(cat.getKey())) continue;
+                spendingSb.append(String.format("    • %s: %d NTD\n", cat.getKey(), cat.getValue()));
+            }
+            memberSpendingArea.setText(spendingSb.toString().trim());
+
             for (Expense e : sorted) {
                 String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
                 memberExpenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
@@ -902,8 +932,11 @@ public class Main extends Application {
 
         updateBalanceLabel(member, balanceLabel);
 
-        root.getChildren().addAll(titleLabel, memberExpenseListView, balanceLabel, buttonRow);
-        Scene memberScene = new Scene(root);
+        root.getChildren().addAll(titleLabel, memberExpenseListView, balanceLabel, memberSpendingArea, buttonRow);
+        ScrollPane memberScroll = new ScrollPane(root);
+        memberScroll.setFitToWidth(true);
+        memberScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        Scene memberScene = new Scene(memberScroll);
         memberScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
         detailStage.setScene(memberScene);
         detailStage.show();
