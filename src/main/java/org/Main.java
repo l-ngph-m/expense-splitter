@@ -601,7 +601,13 @@ public class Main extends Application {
                         entry.getValue() >= 0 ? "(is owed)" : "(owes)"));
             }
             int total = BillSplitterService.getTotalGroupSpent(currentGroup);
-            sb.append(String.format("\nTotal Group Spending: %d NTD", total));
+            sb.append(String.format("\nTotal Group Spending: %d NTD\n", total));
+            Map<String, Double> catTotals = BillSplitterService.getCategoryTotal(currentGroup);
+            sb.append("\n  Per Category:\n");
+            for (Map.Entry<String, Double> cat : catTotals.entrySet()) {
+                if ("Settlement".equals(cat.getKey())) continue;
+                sb.append(String.format("    • %s: %d NTD\n", cat.getKey(), cat.getValue().intValue()));
+            }
             balanceTextArea.setText(sb.toString());
         }
     }
