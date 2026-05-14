@@ -71,7 +71,9 @@ public class Main extends Application {
         root.setCenter(scrollPane);
         root.setStyle("-fx-font-size: 14px;");
 
-        stage.setScene(new Scene(root));
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        stage.setScene(scene);
         stage.show();
 
         showGroupsPanel();
@@ -80,6 +82,7 @@ public class Main extends Application {
     private Button createNavButton(String text) {
         Button btn = new Button(text);
         btn.setPrefWidth(80);
+        btn.getStyleClass().add("nav-button");
         return btn;
     }
 
@@ -322,6 +325,7 @@ public class Main extends Application {
 
         Button addGroupBtn = new Button("Add Group");
         Button deleteGroupBtn = new Button("Delete Group");
+        deleteGroupBtn.getStyleClass().add("delete-button");
 
         HBox inputRow = new HBox(10, newGroupField, addGroupBtn);
         inputRow.setAlignment(Pos.CENTER_LEFT);
@@ -392,6 +396,7 @@ public class Main extends Application {
 
         Button addMemberBtn = new Button("Add Member");
         Button deleteMemberBtn = new Button("Remove Member");
+        deleteMemberBtn.getStyleClass().add("delete-button");
         Button backBtn = new Button("Back to Groups");
 
         HBox inputRow = new HBox(10, newMemberField, addMemberBtn);
@@ -487,6 +492,7 @@ public class Main extends Application {
         Button addExpenseBtn = new Button("Add Expense");
         Button autoSplitBtn = new Button("Auto Split");
         Button deleteExpenseBtn = new Button("Delete Expense");
+        deleteExpenseBtn.getStyleClass().add("delete-button");
         Button backBtn = new Button("Back to Groups");
 
         addExpenseBtn.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
@@ -631,7 +637,9 @@ public class Main extends Application {
         amountField.setOnAction(e -> confirmSettlement(payerCombo, receiverCombo, amountField, settleStage));
 
         root.getChildren().addAll(titleLabel, payerCombo, receiverCombo, amountField, confirmBtn);
-        settleStage.setScene(new Scene(root));
+        Scene settleScene = new Scene(root);
+        settleScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        settleStage.setScene(settleScene);
         settleStage.show();
     }
 
@@ -759,7 +767,9 @@ public class Main extends Application {
 
         HBox buttonRow = new HBox(10);
         Button saveBtn = new Button("Save");
+        saveBtn.getStyleClass().add("save-button");
         Button deleteBtn = new Button("Delete");
+        deleteBtn.getStyleClass().add("delete-button");
         Button closeBtn = new Button("Close");
         buttonRow.getChildren().addAll(saveBtn, deleteBtn, closeBtn);
 
@@ -822,7 +832,9 @@ public class Main extends Application {
         ScrollPane detailScroll = new ScrollPane(root);
         detailScroll.setFitToWidth(true);
         detailScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        detailStage.setScene(new Scene(detailScroll));
+        Scene detailScene = new Scene(detailScroll);
+        detailScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        detailStage.setScene(detailScene);
         detailStage.show();
     }
 
@@ -885,7 +897,9 @@ public class Main extends Application {
         updateBalanceLabel(member, balanceLabel);
 
         root.getChildren().addAll(titleLabel, memberExpenseListView, balanceLabel, buttonRow);
-        detailStage.setScene(new Scene(root));
+        Scene memberScene = new Scene(root);
+        memberScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        detailStage.setScene(memberScene);
         detailStage.show();
     }
 
@@ -978,7 +992,9 @@ public class Main extends Application {
 
         HBox buttonRow = new HBox(10);
         Button saveBtn = new Button("Save");
+        saveBtn.getStyleClass().add("save-button");
         Button deleteBtn = new Button("Delete");
+        deleteBtn.getStyleClass().add("delete-button");
         Button closeBtn = new Button("Close");
         buttonRow.getChildren().addAll(saveBtn, deleteBtn, closeBtn);
 
@@ -1041,7 +1057,9 @@ public class Main extends Application {
         ScrollPane detailScroll = new ScrollPane(root);
         detailScroll.setFitToWidth(true);
         detailScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        detailStage.setScene(new Scene(detailScroll));
+        Scene detailScene = new Scene(detailScroll);
+        detailScene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        detailStage.setScene(detailScene);
         detailStage.show();
     }
 }
