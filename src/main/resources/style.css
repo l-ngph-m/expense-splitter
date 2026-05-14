@@ -1,5 +1,6 @@
 .root {
     -fx-font-family: "Segoe UI", "System", sans-serif;
+    -fx-font-size: 14px;
 }
 
 /* ── Base Button ── */

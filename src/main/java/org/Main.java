@@ -865,7 +865,7 @@ public class Main extends Application {
 
         TextArea memberSpendingArea = new TextArea();
         memberSpendingArea.setEditable(false);
-        memberSpendingArea.setPrefHeight(120);
+        memberSpendingArea.setPrefHeight(200);
 
         Runnable refreshList = () -> {
             memberExpenseListView.getItems().clear();
