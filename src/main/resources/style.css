@@ -5,26 +5,34 @@
 
 /* ── Base Button ── */
 .button {
-    -fx-background-color: transparent;
+    -fx-background-color: #f0f0f0;
     -fx-text-fill: #444;
     -fx-padding: 6 16;
-    -fx-border: none;
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
 }
 .button:hover {
-    -fx-background-color: #e0e0e0;
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #43A047;
     -fx-text-fill: #111;
 }
 
 /* ── Nav Buttons ── */
 .nav-button {
-    -fx-background-color: transparent;
+    -fx-background-color: #f0f0f0;
     -fx-text-fill: #555;
     -fx-font-size: 13px;
     -fx-padding: 8 12;
-    -fx-border: none;
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
 }
 .nav-button:hover {
-    -fx-background-color: #e0e0e0;
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #43A047;
     -fx-text-fill: #111;
 }
 
