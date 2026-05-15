@@ -1,10 +1,13 @@
 package org;
 
 import javafx.application.Application;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -25,7 +28,7 @@ public class Main extends Application {
 
     private ListView<String> groupListView = new ListView<>();
     private ListView<String> memberListView = new ListView<>();
-    private ListView<String> expenseListView = new ListView<>();
+    private TableView<Expense> expenseListView = new TableView<>();
     private TextArea balanceTextArea = new TextArea();
 
     public static void main(String[] args) {
@@ -265,27 +268,56 @@ public class Main extends Application {
         } catch (NumberFormatException ignored) {}
     }
 
+    private void setupExpenseTableColumns(TableView<Expense> table) {
+        TableColumn<Expense, String> dateCol = new TableColumn<>("Date");
+        dateCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getFormattedDate()));
+        dateCol.setSortType(TableColumn.SortType.DESCENDING);
+        dateCol.setPrefWidth(80);
+
+        TableColumn<Expense, Integer> amountCol = new TableColumn<>("Amount");
+        amountCol.setCellValueFactory(cd -> new SimpleObjectProperty<>(cd.getValue().getAmount()));
+        amountCol.setCellFactory(col -> new TableCell<Expense, Integer>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : item + " NTD");
+            }
+        });
+        amountCol.setPrefWidth(85);
+
+        TableColumn<Expense, String> paidByCol = new TableColumn<>("Paid By");
+        paidByCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getPaidByNames()));
+        paidByCol.setPrefWidth(85);
+
+        TableColumn<Expense, String> catCol = new TableColumn<>("Category");
+        catCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getCategory()));
+        catCol.setPrefWidth(85);
+
+        TableColumn<Expense, String> descCol = new TableColumn<>("Description");
+        descCol.setCellValueFactory(cd -> {
+            String d = cd.getValue().getDescription();
+            return new SimpleStringProperty(d.isEmpty() ? "—" : d);
+        });
+        descCol.setPrefWidth(200);
+
+        table.getColumns().addAll(dateCol, amountCol, paidByCol, catCol, descCol);
+        table.getSortOrder().add(dateCol);
+    }
+
     private void refreshExpenseList() {
         expenseListView.getItems().clear();
         if (currentGroup != null) {
-            List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
+            List<Expense> sorted = currentGroup.getExpenses().stream()
                     .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
                     .toList();
-            for (Expense e : sortedExpenses) {
-                String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
-                expenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
-                        e.getFormattedDate(), e.getAmount(), e.getPaidByNames(), e.getCategory(), desc));
-            }
+            expenseListView.getItems().addAll(sorted);
+            expenseListView.sort();
         }
     }
 
     private void deleteExpense() {
-        int idx = expenseListView.getSelectionModel().getSelectedIndex();
-        if (idx >= 0) {
-            List<Expense> sortedExpenses = currentGroup.getExpenses().stream()
-                    .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
-                    .toList();
-            Expense selected = sortedExpenses.get(idx);
+        Expense selected = expenseListView.getSelectionModel().getSelectedItem();
+        if (selected != null) {
             currentGroup.getExpenses().remove(selected);
             DataStore.saveData();
             refreshExpenseList();
@@ -434,19 +466,16 @@ public class Main extends Application {
         Label title = new Label("Expenses: " + currentGroup.getName());
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
+        setupExpenseTableColumns(expenseListView);
         expenseListView.setPrefHeight(250);
         expenseListView.setStyle("-fx-font-size: 16px;");
+        expenseListView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         refreshExpenseList();
 
         expenseListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
-                int idx = expenseListView.getSelectionModel().getSelectedIndex();
-                if (idx >= 0) {
-                    List<Expense> sorted = currentGroup.getExpenses().stream()
-                            .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
-                            .toList();
-                    showExpenseDetail(sorted.get(idx));
-                }
+                Expense selected = expenseListView.getSelectionModel().getSelectedItem();
+                if (selected != null) showExpenseDetail(selected);
             }
         });
 
@@ -856,9 +885,10 @@ public class Main extends Application {
         Label titleLabel = new Label("Expenses: " + member.getName());
         titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-        ListView<String> memberExpenseListView = new ListView<>();
+        TableView<Expense> memberExpenseListView = new TableView<>();
         memberExpenseListView.setPrefHeight(200);
         memberExpenseListView.setStyle("-fx-font-size: 16px;");
+        memberExpenseListView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         Label balanceLabel = new Label();
         balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
@@ -899,28 +929,20 @@ public class Main extends Application {
             }
             memberSpendingArea.setText(spendingSb.toString().trim());
 
-            for (Expense e : sorted) {
-                String desc = e.getDescription().isEmpty() ? "—" : e.getDescription();
-                memberExpenseListView.getItems().add(String.format("[%s]  %6d NTD  %-10s  %-12s  %s",
-                        e.getFormattedDate(), e.getAmount(), e.getPaidByNames(), e.getCategory(), desc));
-            }
+            memberExpenseListView.getItems().addAll(sorted);
         };
+        setupExpenseTableColumns(memberExpenseListView);
         refreshList.run();
 
-        memberExpenseListView.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+        memberExpenseListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
-                int idx = memberExpenseListView.getSelectionModel().getSelectedIndex();
-                if (idx >= 0) {
-                    List<Expense> sorted = currentGroup.getExpenses().stream()
-                            .filter(exp -> exp.getParticipants().contains(member) || exp.getPaidByAmounts().containsKey(member))
-                            .sorted((a, b) -> b.getExpenseDate().compareTo(a.getExpenseDate()))
-                            .toList();
-                    Expense expense = sorted.get(idx);
+                Expense selected = memberExpenseListView.getSelectionModel().getSelectedItem();
+                if (selected != null) {
                     Runnable originalRefresh = () -> {
                         refreshList.run();
                         updateBalanceLabel(member, balanceLabel);
                     };
-                    showExpenseDetailForExpense(expense, originalRefresh);
+                    showExpenseDetailForExpense(selected, originalRefresh);
                 }
             }
         });
