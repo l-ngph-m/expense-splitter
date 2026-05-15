@@ -27,26 +27,12 @@ jobs:
       - name: Build jlink image
         run: mvn javafx:jlink
 
-      - name: Create launcher scripts
+      - name: Copy launcher scripts
         shell: bash
         run: |
-          cd target/expense-splitter
-          cat > expense-splitter.bat << 'BAT'
-@echo off
-cd /d "%~dp0"
-"bin\java" -m expense.splitter/org.Main %*
-if errorlevel 1 (
-    echo.
-    echo Application exited with code %errorlevel%
-    pause
-)
-BAT
-          cat > expense-splitter.sh << 'SH'
-#!/usr/bin/env bash
-DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/bin/java" -m expense.splitter/org.Main "$@"
-SH
-          chmod +x expense-splitter.sh
+          cp scripts/expense-splitter.bat target/expense-splitter/
+          cp scripts/expense-splitter.sh target/expense-splitter/
+          chmod +x target/expense-splitter/expense-splitter.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
