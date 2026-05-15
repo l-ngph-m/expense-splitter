@@ -112,9 +112,9 @@ Calculates a single member's net balance by scanning all expenses:
 | `start(Stage)` | Sets up resizable min-650x650 window, left nav bar (Groups, Members, Expenses, Balances), and `BorderPane` layout |
 | `createNavButton(text)` | Creates a nav button (80px wide) |
 | **Group Panel** | |
-| `showGroupsPanel()` | ListView of groups, add/delete/select buttons, double-click to enter group |
+| `showGroupsPanel()` | Displays the group management panel with add, delete, and selection functionality |
 | `addGroup(TextField)` | Creates group, validates duplicate names |
-| `deleteGroup()` | Removes from groups, moves to history |
+| `deleteGroup()` | Deletes the selected group and stores it in group history |
 | **Member Panel** | |
 | `showMembersPanel()` | ListView of members in current group, add/delete/back buttons, double-click opens member detail |
 | `addMember(TextField)` | Creates member, validates duplicates |
@@ -129,7 +129,7 @@ Calculates a single member's net balance by scanning all expenses:
 | `resetPayerBox(VBox)` | Unchecks all payer checkboxes and resets amounts to `"0"` |
 | `autoDistribute(VBox, TextField)` | Evenly splits total amount among checked payers (with remainder distributed to first N) |
 | **Balance Panel** | |
-| `showBalancesPanel()` | Shows balances automatically on load. Includes Settle Balance button |
+| `showBalancesPanel()` | Displays current balances and settlement controls |
 | `calculateBalances(simplify)` | If simplify=false: shows per-person balances + total. If simplify=true: shows simplified debt plan |
 | `showSettleDialog()` | Opens popup with payer/receiver combos + amount field |
 | `confirmSettlement(...)` | Creates a Settlement-category expense with payer→receiver, persists, refreshes |
