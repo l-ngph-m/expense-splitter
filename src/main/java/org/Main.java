@@ -269,6 +269,7 @@ public class Main extends Application {
     }
 
     private void setupExpenseTableColumns(TableView<Expense> table) {
+        table.getColumns().clear();
         TableColumn<Expense, String> dateCol = new TableColumn<>("Date");
         dateCol.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getFormattedDate()));
         dateCol.setSortType(TableColumn.SortType.DESCENDING);
