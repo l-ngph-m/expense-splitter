@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,16 +13,16 @@ import java.util.stream.Collectors;
 public class Expense implements Serializable {
     private int amount;
     private Map<User, Integer> paidByAmounts;
-    private List<User> participants;
+    private Map<User, Integer> participantShares;
     private String category;
     private String description;
     private LocalDate expenseDate;
     private LocalDateTime dateTime;
 
-    public Expense(int amount, Map<User, Integer> paidByAmounts, List<User> participants, String category, String description, LocalDate expenseDate) {
+    public Expense(int amount, Map<User, Integer> paidByAmounts, Map<User, Integer> participantShares, String category, String description, LocalDate expenseDate) {
         this.amount = amount;
         this.paidByAmounts = paidByAmounts != null ? new HashMap<>(paidByAmounts) : new HashMap<>();
-        this.participants = participants;
+        this.participantShares = participantShares != null ? new HashMap<>(participantShares) : new HashMap<>();
         this.category = category;
         this.description = description != null ? description : "";
         this.expenseDate = expenseDate != null ? expenseDate : LocalDate.now();
@@ -38,7 +39,13 @@ public class Expense implements Serializable {
         return paidByAmounts.keySet().stream().map(User::getName).collect(Collectors.joining("+"));
     }
     public List<User> getParticipants() {
-        return participants;
+        return new ArrayList<>(participantShares.keySet());
+    }
+    public Map<User, Integer> getParticipantShares() {
+        return participantShares;
+    }
+    public void setParticipantShares(Map<User, Integer> participantShares) {
+        this.participantShares = participantShares != null ? new HashMap<>(participantShares) : new HashMap<>();
     }
     public String getCategory() {
         return category;

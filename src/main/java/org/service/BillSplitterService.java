@@ -28,11 +28,9 @@ public class BillSplitterService {
         }
 
         for (Expense e : group.getExpenses()) {
-            int share = e.getParticipants().isEmpty() ? 0 : e.getAmount() / e.getParticipants().size();
-
-            for (User user : e.getParticipants()) {
-                if (balance.containsKey(user)) {
-                    balance.put(user, balance.get(user) - share);
+            for (Map.Entry<User, Integer> entry : e.getParticipantShares().entrySet()) {
+                if (balance.containsKey(entry.getKey())) {
+                    balance.put(entry.getKey(), balance.get(entry.getKey()) - entry.getValue());
                 }
             }
 
@@ -86,10 +84,8 @@ public class BillSplitterService {
     public static int getUserBalance(Group group, User user) {
         int balance = 0;
         for (Expense e : group.getExpenses()) {
-            if (e.getParticipants().isEmpty()) continue;
-            int share = e.getAmount() / e.getParticipants().size();
-
-            if (e.getParticipants().contains(user)) {
+            Integer share = e.getParticipantShares().get(user);
+            if (share != null) {
                 balance -= share;
             }
 

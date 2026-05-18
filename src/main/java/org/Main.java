@@ -164,24 +164,22 @@ public class Main extends Application {
             }
             if (!validatePayerMap(payerMap, amount)) return;
 
-                List<User> participants = new ArrayList<>();
-            for (javafx.scene.Node node : participantsBox.getChildren()) {
-                if (node instanceof CheckBox cb && cb.isSelected()) {
-                    currentGroup.getMembers().stream()
-                            .filter(u -> u.getName().equals(cb.getId()))
-                            .findFirst().ifPresent(participants::add);
-                }
+            Map<User, Integer> shareMap = buildParticipantShareMap(participantsBox);
+            if (shareMap.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Please select at least one participant");
+                alert.showAndWait();
+                return;
             }
+            if (!validateParticipantShares(shareMap, amount)) return;
 
-            if (!participants.isEmpty()) {
-                Expense exp = new Expense(amount, payerMap, participants, category, description, expenseDate);
-                currentGroup.addExpense(exp);
-                DataStore.saveData();
-                refreshExpenseList();
-                amountField.clear();
-                descriptionField.clear();
-                resetPayerBox(payerBox);
-            }
+            Expense exp = new Expense(amount, payerMap, shareMap, category, description, expenseDate);
+            currentGroup.addExpense(exp);
+            DataStore.saveData();
+            refreshExpenseList();
+            amountField.clear();
+            descriptionField.clear();
+            resetPayerBox(payerBox);
+            resetParticipantSharesBox(participantsBox);
         } catch (NumberFormatException ex) {
             Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
             alert.showAndWait();
@@ -235,6 +233,83 @@ public class Main extends Application {
                     } else if (child instanceof TextField tf) {
                         tf.setText("0");
                     }
+                }
+            }
+        }
+    }
+
+    private Map<User, Integer> buildParticipantShareMap(VBox participantsBox) {
+        Map<User, Integer> map = new HashMap<>();
+        for (javafx.scene.Node node : participantsBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb && cb.isSelected()) {
+                        String name = cb.getId();
+                        User user = currentGroup.getMembers().stream()
+                                .filter(u -> u.getName().equals(name)).findFirst().orElse(null);
+                        if (user != null) {
+                            int share = 0;
+                            for (javafx.scene.Node c2 : row.getChildren()) {
+                                if (c2 instanceof TextField tf) {
+                                    try {
+                                        share = Integer.parseInt(tf.getText());
+                                    } catch (NumberFormatException ignored) {}
+                                }
+                            }
+                            map.put(user, share);
+                        }
+                    }
+                }
+            }
+        }
+        return map;
+    }
+
+    private boolean validateParticipantShares(Map<User, Integer> shareMap, int expectedTotal) {
+        int sum = shareMap.values().stream().mapToInt(Integer::intValue).sum();
+        if (sum != expectedTotal) {
+            Alert alert = new Alert(Alert.AlertType.WARNING,
+                    "Participant shares sum to " + sum + " NTD, but total expense is " + expectedTotal + " NTD");
+            alert.showAndWait();
+            return false;
+        }
+        return true;
+    }
+
+    private void resetParticipantSharesBox(VBox participantsBox) {
+        for (javafx.scene.Node node : participantsBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb) {
+                        cb.setSelected(false);
+                    } else if (child instanceof TextField tf) {
+                        tf.setText("0");
+                    }
+                }
+            }
+        }
+    }
+
+    private void autoDistributeParticipantShares(VBox participantsBox, int total) {
+        if (total <= 0) return;
+        List<HBox> checkedRows = new ArrayList<>();
+        for (javafx.scene.Node node : participantsBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb && cb.isSelected()) {
+                        checkedRows.add(row);
+                        break;
+                    }
+                }
+            }
+        }
+        if (checkedRows.isEmpty()) return;
+        int share = total / checkedRows.size();
+        int remainder = total - share * checkedRows.size();
+        for (int i = 0; i < checkedRows.size(); i++) {
+            for (javafx.scene.Node child : checkedRows.get(i).getChildren()) {
+                if (child instanceof TextField tf) {
+                    tf.setText(String.valueOf(share + (i < remainder ? 1 : 0)));
                 }
             }
         }
@@ -357,6 +432,7 @@ public class Main extends Application {
         newGroupField.setPromptText("New group name");
 
         Button addGroupBtn = new Button("Add Group");
+        addGroupBtn.getStyleClass().add("save-button");
         Button deleteGroupBtn = new Button("Delete Group");
         deleteGroupBtn.getStyleClass().add("delete-button");
 
@@ -386,7 +462,10 @@ public class Main extends Application {
             }
         });
 
-        mainContent.getChildren().addAll(title, groupListView, inputRow, deleteGroupBtn, selectBtn);
+        Label groupHint = new Label("Double click a group to view");
+        groupHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+
+        mainContent.getChildren().addAll(title, groupListView, groupHint, inputRow, deleteGroupBtn, selectBtn);
     }
 
     private void showMembersPanel() {
@@ -428,6 +507,7 @@ public class Main extends Application {
         newMemberField.setPromptText("Member name");
 
         Button addMemberBtn = new Button("Add Member");
+        addMemberBtn.getStyleClass().add("save-button");
         Button deleteMemberBtn = new Button("Remove Member");
         deleteMemberBtn.getStyleClass().add("delete-button");
         Button backBtn = new Button("Back to Groups");
@@ -447,7 +527,10 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        mainContent.getChildren().addAll(title, memberListView, inputRow, deleteMemberBtn, backBtn);
+        Label memberHint = new Label("Double click a member to see more details");
+        memberHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+
+        mainContent.getChildren().addAll(title, memberListView, memberHint, inputRow, deleteMemberBtn, backBtn);
     }
 
     private void showExpensesPanel() {
@@ -516,20 +599,33 @@ public class Main extends Application {
             CheckBox cb = new CheckBox(u.getName());
             cb.setSelected(true);
             cb.setId(u.getName());
-            participantsBox.getChildren().add(cb);
+            TextField tf = new TextField("0");
+            tf.setPrefWidth(80);
+            HBox row = new HBox(10, cb, tf);
+            participantsBox.getChildren().add(row);
         }
 
         Button addExpenseBtn = new Button("Add Expense");
+        addExpenseBtn.getStyleClass().add("save-button");
         Button autoSplitBtn = new Button("Auto Split");
         Button deleteExpenseBtn = new Button("Delete Expense");
         deleteExpenseBtn.getStyleClass().add("delete-button");
         Button backBtn = new Button("Back to Groups");
+
+        Button partAutoSplitBtn = new Button("Auto Split");
 
         addExpenseBtn.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
         amountField.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
         descriptionField.setOnAction(e -> addExpense(amountField, payerBox, categoryCombo, descriptionField, datePicker, participantsBox));
 
         autoSplitBtn.setOnAction(e -> autoDistribute(payerBox, amountField));
+
+        partAutoSplitBtn.setOnAction(e -> {
+            try {
+                int total = Integer.parseInt(amountField.getText());
+                autoDistributeParticipantShares(participantsBox, total);
+            } catch (NumberFormatException ignored) {}
+        });
 
         for (javafx.scene.Node node : payerBox.getChildren()) {
             if (node instanceof HBox row) {
@@ -541,6 +637,32 @@ public class Main extends Application {
             }
         }
 
+        for (javafx.scene.Node node : participantsBox.getChildren()) {
+            if (node instanceof HBox row) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof CheckBox cb) {
+                        cb.selectedProperty().addListener((obs, old, val) -> {
+                            try {
+                                int total = Integer.parseInt(amountField.getText());
+                                autoDistributeParticipantShares(participantsBox, total);
+                            } catch (NumberFormatException ignored) {}
+                        });
+                    }
+                }
+            }
+        }
+
+        amountField.textProperty().addListener((obs, old, val) -> {
+            if (!val.equals(old)) {
+                try {
+                    int total = Integer.parseInt(val);
+                    if (total > 0) {
+                        autoDistributeParticipantShares(participantsBox, total);
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        });
+
         deleteExpenseBtn.setOnAction(e -> deleteExpense());
         deleteExpenseBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) deleteExpense();
@@ -551,9 +673,12 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        VBox form = new VBox(10, amountField, payerBox, autoSplitBtn, categoryCombo, descriptionField, datePicker, participantsBox, addExpenseBtn);
+        Label expenseHint = new Label("Double click an expense to see more details");
+        expenseHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
 
-        mainContent.getChildren().addAll(title, expenseListView, form, deleteExpenseBtn, backBtn);
+        VBox form = new VBox(10, amountField, payerBox, autoSplitBtn, categoryCombo, descriptionField, datePicker, participantsBox, partAutoSplitBtn, addExpenseBtn);
+
+        mainContent.getChildren().addAll(title, expenseListView, expenseHint, form, deleteExpenseBtn, backBtn);
     }
 
     private void showBalancesPanel() {
@@ -712,7 +837,9 @@ public class Main extends Application {
 
             Map<User, Integer> payerMap = new HashMap<>();
             payerMap.put(payer, amount);
-            Expense settlement = new Expense(amount, payerMap, new ArrayList<>(List.of(receiver)), "Settlement", "Settlement", LocalDate.now());
+            Map<User, Integer> settleShares = new HashMap<>();
+            settleShares.put(receiver, amount);
+            Expense settlement = new Expense(amount, payerMap, settleShares, "Settlement", "Settlement", LocalDate.now());
             currentGroup.addExpense(settlement);
             DataStore.saveData();
             refreshExpenseList();
@@ -782,20 +909,24 @@ public class Main extends Application {
         Label partLabel = new Label("Participants:");
         participantsBox.getChildren().add(partLabel);
 
+        Map<User, Integer> existingShares = expense.getParticipantShares();
         for (User u : currentGroup.getMembers()) {
             CheckBox cb = new CheckBox(u.getName());
             cb.setId(u.getName());
-            if (expense.getParticipants().contains(u)) cb.setSelected(true);
-            participantsBox.getChildren().add(cb);
+            Integer share = existingShares.get(u);
+            cb.setSelected(share != null);
+            TextField tf = new TextField(share != null ? String.valueOf(share) : "0");
+            tf.setPrefWidth(80);
+            HBox row = new HBox(10, cb, tf);
+            participantsBox.getChildren().add(row);
         }
 
-        int share = expense.getAmount() / expense.getParticipants().size();
-        Label breakdownLabel = new Label("Each person charged: " + share + " NTD");
+        Label breakdownLabel = new Label("Charge Breakdown:");
         breakdownLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         StringBuilder sb = new StringBuilder();
-        for (User u : expense.getParticipants()) {
-            sb.append(String.format("  %s: %d NTD\n", u.getName(), share));
+        for (Map.Entry<User, Integer> entry : existingShares.entrySet()) {
+            sb.append(String.format("  %s: %d NTD\n", entry.getKey().getName(), entry.getValue()));
         }
         TextArea breakdownArea = new TextArea(sb.toString().trim());
         breakdownArea.setEditable(false);
@@ -825,30 +956,23 @@ public class Main extends Application {
                 }
                 if (!validatePayerMap(payerMap, amount)) return;
 
-                List<User> participants = new ArrayList<>();
-                for (javafx.scene.Node node : participantsBox.getChildren()) {
-                    if (node instanceof CheckBox cb && cb.isSelected()) {
-                        currentGroup.getMembers().stream()
-                                .filter(u -> u.getName().equals(cb.getId()))
-                                .findFirst().ifPresent(participants::add);
-                    }
-                }
-
-                if (!participants.isEmpty()) {
-                    expense.getParticipants().clear();
-                    expense.getParticipants().addAll(participants);
-                    expense.setAmount(amount);
-                    expense.setPaidByAmounts(payerMap);
-                    expense.setCategory(detailCategoryCombo.getValue());
-                    expense.setDescription(detailDescField.getText().trim());
-                    expense.setExpenseDate(detailDatePicker.getValue());
-                    DataStore.saveData();
-                    refreshExpenseList();
-                    detailStage.close();
-                } else {
+                Map<User, Integer> shareMap = buildParticipantShareMap(participantsBox);
+                if (shareMap.isEmpty()) {
                     Alert alert = new Alert(Alert.AlertType.WARNING, "Must have at least one participant");
                     alert.showAndWait();
+                    return;
                 }
+                if (!validateParticipantShares(shareMap, amount)) return;
+
+                expense.setAmount(amount);
+                expense.setPaidByAmounts(payerMap);
+                expense.setParticipantShares(shareMap);
+                expense.setCategory(detailCategoryCombo.getValue());
+                expense.setDescription(detailDescField.getText().trim());
+                expense.setExpenseDate(detailDatePicker.getValue());
+                DataStore.saveData();
+                refreshExpenseList();
+                detailStage.close();
             } catch (NumberFormatException ex) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
                 alert.showAndWait();
@@ -908,8 +1032,8 @@ public class Main extends Application {
             int totalShare = 0;
             Map<String, Integer> catShare = new java.util.HashMap<>();
             for (Expense e : sorted) {
-                if (!e.getParticipants().contains(member) || e.getParticipants().isEmpty()) continue;
-                int share = e.getAmount() / e.getParticipants().size();
+                Integer share = e.getParticipantShares().get(member);
+                if (share == null) continue;
                 totalShare += share;
                 catShare.merge(e.getCategory(), share, Integer::sum);
             }
@@ -1033,20 +1157,24 @@ public class Main extends Application {
         Label partLabel = new Label("Participants:");
         participantsBox.getChildren().add(partLabel);
 
+        Map<User, Integer> existingShares = expense.getParticipantShares();
         for (User u : currentGroup.getMembers()) {
             CheckBox cb = new CheckBox(u.getName());
             cb.setId(u.getName());
-            if (expense.getParticipants().contains(u)) cb.setSelected(true);
-            participantsBox.getChildren().add(cb);
+            Integer share = existingShares.get(u);
+            cb.setSelected(share != null);
+            TextField tf = new TextField(share != null ? String.valueOf(share) : "0");
+            tf.setPrefWidth(80);
+            HBox row = new HBox(10, cb, tf);
+            participantsBox.getChildren().add(row);
         }
 
-        int share = expense.getAmount() / expense.getParticipants().size();
-        Label breakdownLabel = new Label("Each person charged: " + share + " NTD");
+        Label breakdownLabel = new Label("Charge Breakdown:");
         breakdownLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
         StringBuilder sb = new StringBuilder();
-        for (User u : expense.getParticipants()) {
-            sb.append(String.format("  %s: %d NTD\n", u.getName(), share));
+        for (Map.Entry<User, Integer> entry : existingShares.entrySet()) {
+            sb.append(String.format("  %s: %d NTD\n", entry.getKey().getName(), entry.getValue()));
         }
         TextArea breakdownArea = new TextArea(sb.toString().trim());
         breakdownArea.setEditable(false);
@@ -1076,30 +1204,23 @@ public class Main extends Application {
                 }
                 if (!validatePayerMap(payerMap, amount)) return;
 
-                List<User> participants = new ArrayList<>();
-                for (javafx.scene.Node node : participantsBox.getChildren()) {
-                    if (node instanceof CheckBox cb && cb.isSelected()) {
-                        currentGroup.getMembers().stream()
-                                .filter(u -> u.getName().equals(cb.getId()))
-                                .findFirst().ifPresent(participants::add);
-                    }
-                }
-
-                if (!participants.isEmpty()) {
-                    expense.getParticipants().clear();
-                    expense.getParticipants().addAll(participants);
-                    expense.setAmount(amount);
-                    expense.setPaidByAmounts(payerMap);
-                    expense.setCategory(detailCategoryCombo.getValue());
-                    expense.setDescription(detailDescField.getText().trim());
-                    expense.setExpenseDate(detailDatePicker.getValue());
-                    DataStore.saveData();
-                    onRefresh.run();
-                    detailStage.close();
-                } else {
+                Map<User, Integer> shareMap = buildParticipantShareMap(participantsBox);
+                if (shareMap.isEmpty()) {
                     Alert alert = new Alert(Alert.AlertType.WARNING, "Must have at least one participant");
                     alert.showAndWait();
+                    return;
                 }
+                if (!validateParticipantShares(shareMap, amount)) return;
+
+                expense.setAmount(amount);
+                expense.setPaidByAmounts(payerMap);
+                expense.setParticipantShares(shareMap);
+                expense.setCategory(detailCategoryCombo.getValue());
+                expense.setDescription(detailDescField.getText().trim());
+                expense.setExpenseDate(detailDatePicker.getValue());
+                DataStore.saveData();
+                onRefresh.run();
+                detailStage.close();
             } catch (NumberFormatException ex) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
                 alert.showAndWait();
