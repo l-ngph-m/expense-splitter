@@ -6,3 +6,4 @@ target/
 .project
 data.dat
 log.txt
+.DS_Store
