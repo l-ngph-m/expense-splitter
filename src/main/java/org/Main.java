@@ -293,13 +293,22 @@ public class Main extends Application {
     private void autoDistributeParticipantShares(VBox participantsBox, int total) {
         if (total <= 0) return;
         List<HBox> checkedRows = new ArrayList<>();
+        List<HBox> allRows = new ArrayList<>();
         for (javafx.scene.Node node : participantsBox.getChildren()) {
             if (node instanceof HBox row) {
+                allRows.add(row);
                 for (javafx.scene.Node child : row.getChildren()) {
                     if (child instanceof CheckBox cb && cb.isSelected()) {
                         checkedRows.add(row);
                         break;
                     }
+                }
+            }
+        }
+        for (HBox row : allRows) {
+            if (!checkedRows.contains(row)) {
+                for (javafx.scene.Node child : row.getChildren()) {
+                    if (child instanceof TextField tf) tf.setText("0");
                 }
             }
         }
@@ -320,13 +329,22 @@ public class Main extends Application {
             int total = Integer.parseInt(amountField.getText());
             if (total <= 0) return;
             List<HBox> checkedRows = new ArrayList<>();
+            List<HBox> allRows = new ArrayList<>();
             for (javafx.scene.Node node : payerBox.getChildren()) {
                 if (node instanceof HBox row) {
+                    allRows.add(row);
                     for (javafx.scene.Node child : row.getChildren()) {
                         if (child instanceof CheckBox cb && cb.isSelected()) {
                             checkedRows.add(row);
                             break;
                         }
+                    }
+                }
+            }
+            for (HBox row : allRows) {
+                if (!checkedRows.contains(row)) {
+                    for (javafx.scene.Node child : row.getChildren()) {
+                        if (child instanceof TextField tf) tf.setText("0");
                     }
                 }
             }
