@@ -1,0 +1,41 @@
+name: Build jlink images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: 25
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build jlink image
+        run: mvn javafx:jlink
+
+      - name: Copy launcher scripts
+        shell: bash
+        run: |
+          cp scripts/expense-splitter.bat target/expense-splitter/
+          cp scripts/expense-splitter.sh target/expense-splitter/
+          chmod +x target/expense-splitter/expense-splitter.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: expense-splitter-${{ runner.os }}
+          path: target/expense-splitter/

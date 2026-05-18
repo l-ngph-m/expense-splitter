@@ -6,7 +6,9 @@ import java.util.stream.Collectors;
 
 public class BillSplitterService {
     public static int getTotalGroupSpent(Group group) {
-        return group.getExpenses().stream().mapToInt(Expense::getAmount).sum();
+        return group.getExpenses().stream()
+                .filter(e -> !"Settlement".equals(e.getCategory()))
+                .mapToInt(Expense::getAmount).sum();
     }
 
     public static Map<String, Double> getCategoryTotal(Group group) {
@@ -26,9 +28,7 @@ public class BillSplitterService {
         }
 
         for (Expense e : group.getExpenses()) {
-            if (!balance.containsKey(e.getPaidBy())) continue;
-
-            int share = e.getAmount() / e.getParticipants().size();
+            int share = e.getParticipants().isEmpty() ? 0 : e.getAmount() / e.getParticipants().size();
 
             for (User user : e.getParticipants()) {
                 if (balance.containsKey(user)) {
@@ -36,8 +36,11 @@ public class BillSplitterService {
                 }
             }
 
-            User payer = e.getPaidBy();
-            balance.put(payer, balance.get(payer) + e.getAmount());
+            for (Map.Entry<User, Integer> payer : e.getPaidByAmounts().entrySet()) {
+                if (balance.containsKey(payer.getKey())) {
+                    balance.put(payer.getKey(), balance.get(payer.getKey()) + payer.getValue());
+                }
+            }
         }
 
         return balance;
@@ -90,40 +93,12 @@ public class BillSplitterService {
                 balance -= share;
             }
 
-            if (e.getPaidBy().equals(user)) {
-                balance += e.getAmount();
+            Integer paid = e.getPaidByAmounts().get(user);
+            if (paid != null) {
+                balance += paid;
             }
         }
         return balance;
     }
 
-    public static List<String> getUserPairwiseDebts(Group group, User user) {
-        List<String> result = new ArrayList<>();
-        int userBalance = getUserBalance(group, user);
-
-        for (User other : group.getMembers()) {
-            if (other.equals(user)) continue;
-            int pairwiseBalance = 0;
-            for (Expense e : group.getExpenses()) {
-                if (e.getParticipants().isEmpty()) continue;
-                int share = e.getAmount() / e.getParticipants().size();
-
-                boolean userInExpense = e.getParticipants().contains(user);
-                boolean otherInExpense = e.getParticipants().contains(other);
-
-                if (userInExpense) pairwiseBalance -= share;
-                if (otherInExpense) pairwiseBalance += share;
-
-                if (e.getPaidBy().equals(user)) pairwiseBalance += e.getAmount();
-                if (e.getPaidBy().equals(other)) pairwiseBalance -= e.getAmount();
-            }
-
-            if (pairwiseBalance > 0) {
-                result.add(String.format("%s pays %s %d NTD", other.getName(), user.getName(), pairwiseBalance));
-            } else if (pairwiseBalance < 0) {
-                result.add(String.format("%s pays %s %d NTD", user.getName(), other.getName(), -pairwiseBalance));
-            }
-        }
-        return result;
-    }
 }
