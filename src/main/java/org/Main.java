@@ -61,7 +61,7 @@ public class Main extends Application {
         VBox leftNav = new VBox(10, groupsBtn, membersBtn, expensesBtn, balancesBtn);
         leftNav.setPadding(new Insets(10));
         leftNav.setStyle("-fx-background-color: #f0f0f0;");
-        leftNav.setPrefWidth(100);
+        leftNav.setPrefWidth(120);
 
         mainContent = new VBox(10);
         mainContent.setPadding(new Insets(10));
@@ -84,7 +84,7 @@ public class Main extends Application {
 
     private Button createNavButton(String text) {
         Button btn = new Button(text);
-        btn.setPrefWidth(80);
+        btn.setPrefWidth(120);
         btn.getStyleClass().add("nav-button");
         return btn;
     }
