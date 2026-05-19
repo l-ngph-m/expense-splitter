@@ -5,7 +5,7 @@
 
 /* ── Base Button ── */
 .button {
-    -fx-background-color: #f0f0f0;
+    -fx-background-color: #e0e0e0;
     -fx-text-fill: #444;
     -fx-padding: 6 16;
     -fx-border-color: transparent;
@@ -150,6 +150,8 @@
     -fx-border-color: #e0e0e0;
     -fx-border-radius: 4;
     -fx-background-radius: 4;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
 }
 .text-area .content {
     -fx-background-color: white;
