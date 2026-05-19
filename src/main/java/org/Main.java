@@ -442,7 +442,11 @@ public class Main extends Application {
 
         groupListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2 && currentGroup != null) {
-                showMembersPanel();
+                if (currentGroup.getMembers().isEmpty()) {
+                    showMembersPanel();
+                } else {
+                    showExpensesPanel();
+                }
             }
         });
 
