@@ -484,7 +484,7 @@ public class Main extends Application {
             }
         });
 
-        Label groupHint = new Label("Double click a group to view");
+        Label groupHint = new Label("Please choose a group to continue");
         groupHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
 
         mainContent.getChildren().addAll(title, groupListView, groupHint, inputRow, deleteGroupBtn, selectBtn);
