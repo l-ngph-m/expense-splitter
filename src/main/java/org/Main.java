@@ -177,7 +177,17 @@ public class Main extends Application {
             amountField.clear();
             descriptionField.clear();
             resetPayerBox(payerBox);
-            resetParticipantSharesBox(participantsBox);
+            for (javafx.scene.Node node : participantsBox.getChildren()) {
+                if (node instanceof HBox row) {
+                    for (javafx.scene.Node child : row.getChildren()) {
+                        if (child instanceof CheckBox cb) {
+                            cb.setSelected(true);
+                        } else if (child instanceof TextField tf) {
+                            tf.setText("0");
+                        }
+                    }
+                }
+            }
         } catch (NumberFormatException ex) {
             Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid amount");
             alert.showAndWait();
