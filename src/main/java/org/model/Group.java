@@ -39,4 +39,5 @@ public class Group implements Serializable {
     public boolean isSettled() { return settled; }
 
     public void setSettled(boolean settled) { this.settled = settled; }
+    public void setName(String name) { this.name = name; }
 }
