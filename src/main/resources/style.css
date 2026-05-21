@@ -3,6 +3,57 @@
     -fx-font-size: 14px;
 }
 
+/* ── Layout ── */
+.left-nav {
+    -fx-background-color: #f0f0f0;
+}
+
+/* ── Bordered Box ── */
+.bordered-box {
+    -fx-border-color: #ccc;
+    -fx-border-radius: 3;
+}
+
+/* ── Panel Titles ── */
+.panel-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* ── Dialog Title ── */
+.dialog-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+/* ── Hint Labels ── */
+.hint-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #999;
+}
+
+/* ── Breakdown Labels ── */
+.breakdown-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+/* ── Balance Labels ── */
+.balance-positive {
+    -fx-text-fill: green;
+}
+.balance-negative {
+    -fx-text-fill: red;
+}
+
+/* ── Large List/Table Views ── */
+.list-view-large {
+    -fx-font-size: 16px;
+}
+.table-view-large {
+    -fx-font-size: 16px;
+}
+
 /* ── Base Button ── */
 .button {
     -fx-background-color: #e0e0e0;

@@ -60,7 +60,7 @@ public class Main extends Application {
 
         VBox leftNav = new VBox(10, groupsBtn, membersBtn, expensesBtn, balancesBtn);
         leftNav.setPadding(new Insets(10));
-        leftNav.setStyle("-fx-background-color: #f0f0f0;");
+        leftNav.getStyleClass().add("left-nav");
         leftNav.setPrefWidth(120);
 
         mainContent = new VBox(10);
@@ -72,8 +72,6 @@ public class Main extends Application {
 
         root.setLeft(leftNav);
         root.setCenter(scrollPane);
-        root.setStyle("-fx-font-size: 14px;");
-
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
         stage.setScene(scene);
@@ -422,14 +420,14 @@ public class Main extends Application {
         mainContent.getChildren().clear();
 
         Label title = new Label("Groups");
-        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        title.getStyleClass().add("panel-title");
 
         groupListView.getItems().clear();
         for (Group g : DataStore.groups) {
             groupListView.getItems().add(g.getName() + " (" + g.getMembers().size() + " members)");
         }
         groupListView.setPrefHeight(200);
-        groupListView.setStyle("-fx-font-size: 16px;");
+        groupListView.getStyleClass().add("list-view-large");
 
         groupListView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
@@ -485,7 +483,7 @@ public class Main extends Application {
         });
 
         Label groupHint = new Label("Please choose a group to continue");
-        groupHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+        groupHint.getStyleClass().add("hint-label");
 
         mainContent.getChildren().addAll(title, groupListView, groupHint, inputRow, deleteGroupBtn, selectBtn);
     }
@@ -505,14 +503,14 @@ public class Main extends Application {
         }
 
         Label title = new Label("Members: " + currentGroup.getName());
-        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        title.getStyleClass().add("panel-title");
 
         memberListView.getItems().clear();
         for (User u : currentGroup.getMembers()) {
             memberListView.getItems().add(u.getName());
         }
         memberListView.setPrefHeight(200);
-        memberListView.setStyle("-fx-font-size: 16px;");
+        memberListView.getStyleClass().add("list-view-large");
 
         memberListView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
@@ -550,7 +548,7 @@ public class Main extends Application {
         });
 
         Label memberHint = new Label("Double click a member to see more details");
-        memberHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+        memberHint.getStyleClass().add("hint-label");
 
         mainContent.getChildren().addAll(title, memberListView, memberHint, inputRow, deleteMemberBtn, backBtn);
     }
@@ -570,11 +568,11 @@ public class Main extends Application {
         }
 
         Label title = new Label("Expenses: " + currentGroup.getName());
-        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        title.getStyleClass().add("panel-title");
 
         setupExpenseTableColumns(expenseListView);
         expenseListView.setPrefHeight(250);
-        expenseListView.setStyle("-fx-font-size: 16px;");
+        expenseListView.getStyleClass().add("table-view-large");
         expenseListView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         refreshExpenseList();
 
@@ -590,7 +588,7 @@ public class Main extends Application {
 
         VBox payerBox = new VBox(5);
         payerBox.setPadding(new Insets(5));
-        payerBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        payerBox.getStyleClass().add("bordered-box");
         Label payerLabel = new Label("Paid by:");
         payerBox.getChildren().add(payerLabel);
         for (User u : currentGroup.getMembers()) {
@@ -613,7 +611,7 @@ public class Main extends Application {
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
-        participantsBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        participantsBox.getStyleClass().add("bordered-box");
         Label partLabel = new Label("Participants:");
         participantsBox.getChildren().add(partLabel);
 
@@ -696,7 +694,7 @@ public class Main extends Application {
         });
 
         Label expenseHint = new Label("Double click an expense to see more details");
-        expenseHint.setStyle("-fx-font-size: 12px; -fx-text-fill: #999;");
+        expenseHint.getStyleClass().add("hint-label");
 
         VBox form = new VBox(10, amountField, payerBox, autoSplitBtn, categoryCombo, descriptionField, datePicker, participantsBox, partAutoSplitBtn, addExpenseBtn);
 
@@ -718,7 +716,7 @@ public class Main extends Application {
         }
 
         Label title = new Label("Balances: " + currentGroup.getName());
-        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        title.getStyleClass().add("panel-title");
 
         balanceTextArea.setEditable(false);
         balanceTextArea.setPrefHeight(200);
@@ -799,7 +797,7 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Record Settlement");
-        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("dialog-title");
 
         List<String> memberNames = currentGroup.getMembers().stream().map(User::getName).toList();
 
@@ -884,7 +882,7 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Expense Details");
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("panel-title");
 
         GridPane infoGrid = new GridPane();
         infoGrid.setHgap(10);
@@ -911,7 +909,7 @@ public class Main extends Application {
 
         VBox detailPayerBox = new VBox(5);
         detailPayerBox.setPadding(new Insets(5));
-        detailPayerBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        detailPayerBox.getStyleClass().add("bordered-box");
         Label detailPayerLabel = new Label("Paid by:");
         detailPayerBox.getChildren().add(detailPayerLabel);
         for (User u : currentGroup.getMembers()) {
@@ -927,7 +925,7 @@ public class Main extends Application {
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
-        participantsBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        participantsBox.getStyleClass().add("bordered-box");
         Label partLabel = new Label("Participants:");
         participantsBox.getChildren().add(partLabel);
 
@@ -944,7 +942,7 @@ public class Main extends Application {
         }
 
         Label breakdownLabel = new Label("Charge Breakdown:");
-        breakdownLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        breakdownLabel.getStyleClass().add("breakdown-label");
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<User, Integer> entry : existingShares.entrySet()) {
@@ -1030,15 +1028,15 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Expenses: " + member.getName());
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("panel-title");
 
         TableView<Expense> memberExpenseListView = new TableView<>();
         memberExpenseListView.setPrefHeight(200);
-        memberExpenseListView.setStyle("-fx-font-size: 16px;");
+        memberExpenseListView.getStyleClass().add("table-view-large");
         memberExpenseListView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         Label balanceLabel = new Label();
-        balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        balanceLabel.getStyleClass().add("breakdown-label");
 
         TextArea memberSpendingArea = new TextArea();
         memberSpendingArea.setEditable(false);
@@ -1113,12 +1111,13 @@ public class Main extends Application {
 
     private void updateBalanceLabel(User member, Label balanceLabel) {
         int balance = BillSplitterService.getUserBalance(currentGroup, member);
+        balanceLabel.getStyleClass().removeAll("balance-positive", "balance-negative");
         if (balance >= 0) {
             balanceLabel.setText(String.format("Total Balance: %d NTD (is owed)", balance));
-            balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: green;");
+            balanceLabel.getStyleClass().add("balance-positive");
         } else {
             balanceLabel.setText(String.format("Total Balance: %d NTD (owes)", balance));
-            balanceLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: red;");
+            balanceLabel.getStyleClass().add("balance-negative");
         }
     }
 
@@ -1132,7 +1131,7 @@ public class Main extends Application {
         root.setPadding(new Insets(15));
 
         Label titleLabel = new Label("Expense Details");
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("panel-title");
 
         GridPane infoGrid = new GridPane();
         infoGrid.setHgap(10);
@@ -1159,7 +1158,7 @@ public class Main extends Application {
 
         VBox detailPayerBox = new VBox(5);
         detailPayerBox.setPadding(new Insets(5));
-        detailPayerBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        detailPayerBox.getStyleClass().add("bordered-box");
         Label detailPayerLabel = new Label("Paid by:");
         detailPayerBox.getChildren().add(detailPayerLabel);
         for (User u : currentGroup.getMembers()) {
@@ -1175,7 +1174,7 @@ public class Main extends Application {
 
         VBox participantsBox = new VBox(5);
         participantsBox.setPadding(new Insets(5));
-        participantsBox.setStyle("-fx-border-color: #ccc; -fx-border-radius: 3;");
+        participantsBox.getStyleClass().add("bordered-box");
         Label partLabel = new Label("Participants:");
         participantsBox.getChildren().add(partLabel);
 
@@ -1192,7 +1191,7 @@ public class Main extends Application {
         }
 
         Label breakdownLabel = new Label("Charge Breakdown:");
-        breakdownLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        breakdownLabel.getStyleClass().add("breakdown-label");
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<User, Integer> entry : existingShares.entrySet()) {
