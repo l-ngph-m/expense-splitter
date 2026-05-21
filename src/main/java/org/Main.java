@@ -455,6 +455,7 @@ public class Main extends Application {
         addGroupBtn.getStyleClass().add("save-button");
         Button deleteGroupBtn = new Button("Delete Group");
         deleteGroupBtn.getStyleClass().add("delete-button");
+        Button renameGroupBtn = new Button("Rename Group");
 
         HBox inputRow = new HBox(10, newGroupField, addGroupBtn);
         inputRow.setAlignment(Pos.CENTER_LEFT);
@@ -465,6 +466,33 @@ public class Main extends Application {
         deleteGroupBtn.setOnAction(e -> deleteGroup());
         deleteGroupBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) deleteGroup();
+        });
+
+        renameGroupBtn.setOnAction(e -> {
+            if (currentGroup == null) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Please select a group first");
+                alert.showAndWait();
+                return;
+            }
+            TextInputDialog dialog = new TextInputDialog(currentGroup.getName());
+            dialog.setTitle("Rename Group");
+            dialog.setHeaderText("Enter a new name for the group");
+            dialog.setContentText("New name:");
+            dialog.showAndWait().ifPresent(newName -> {
+                String trimmed = newName.trim();
+                if (trimmed.isEmpty()) return;
+                if (trimmed.equals(currentGroup.getName())) return;
+                boolean exists = DataStore.groups.stream()
+                        .anyMatch(g -> g.getName().equals(trimmed));
+                if (exists) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "A group with that name already exists");
+                    alert.showAndWait();
+                    return;
+                }
+                currentGroup.setName(trimmed);
+                DataStore.saveData();
+                showGroupsPanel();
+            });
         });
 
         Button selectBtn = new Button("Select Group");
@@ -485,7 +513,7 @@ public class Main extends Application {
         Label groupHint = new Label("Please choose a group to continue");
         groupHint.getStyleClass().add("hint-label");
 
-        mainContent.getChildren().addAll(title, groupListView, groupHint, inputRow, deleteGroupBtn, selectBtn);
+        mainContent.getChildren().addAll(title, groupListView, groupHint, inputRow, renameGroupBtn, deleteGroupBtn, selectBtn);
     }
 
     private void showMembersPanel() {
@@ -530,6 +558,7 @@ public class Main extends Application {
         addMemberBtn.getStyleClass().add("save-button");
         Button deleteMemberBtn = new Button("Remove Member");
         deleteMemberBtn.getStyleClass().add("delete-button");
+        Button renameMemberBtn = new Button("Rename Member");
         Button backBtn = new Button("Back to Groups");
 
         HBox inputRow = new HBox(10, newMemberField, addMemberBtn);
@@ -542,6 +571,56 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) deleteMember();
         });
 
+        renameMemberBtn.setOnAction(e -> {
+            String selected = memberListView.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Please select a member first");
+                alert.showAndWait();
+                return;
+            }
+            User oldUser = currentGroup.getMembers().stream()
+                    .filter(u -> u.getName().equals(selected)).findFirst().orElse(null);
+            if (oldUser == null) return;
+
+            TextInputDialog dialog = new TextInputDialog(oldUser.getName());
+            dialog.setTitle("Rename Member");
+            dialog.setHeaderText("Enter a new name for " + oldUser.getName());
+            dialog.setContentText("New name:");
+            dialog.showAndWait().ifPresent(newName -> {
+                String trimmed = newName.trim();
+                if (trimmed.isEmpty()) return;
+                if (trimmed.equals(oldUser.getName())) return;
+                boolean exists = currentGroup.getMembers().stream()
+                        .anyMatch(u -> u.getName().equals(trimmed));
+                if (exists) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING, "A member with that name already exists");
+                    alert.showAndWait();
+                    return;
+                }
+
+                User newUser = new User(trimmed, 0.0);
+
+                for (Expense exp : currentGroup.getExpenses()) {
+                    Map<User, Integer> paid = exp.getPaidByAmounts();
+                    if (paid.containsKey(oldUser)) {
+                        paid.put(newUser, paid.remove(oldUser));
+                    }
+                    Map<User, Integer> shares = exp.getParticipantShares();
+                    if (shares.containsKey(oldUser)) {
+                        shares.put(newUser, shares.remove(oldUser));
+                    }
+                }
+
+                int idx = currentGroup.getMembers().indexOf(oldUser);
+                if (idx >= 0) {
+                    currentGroup.getMembers().set(idx, newUser);
+                }
+
+                DataStore.saveData();
+                showMembersPanel();
+            });
+        });
+
         backBtn.setOnAction(e -> showGroupsPanel());
         backBtn.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
@@ -550,7 +629,7 @@ public class Main extends Application {
         Label memberHint = new Label("Double click a member to see more details");
         memberHint.getStyleClass().add("hint-label");
 
-        mainContent.getChildren().addAll(title, memberListView, memberHint, inputRow, deleteMemberBtn, backBtn);
+        mainContent.getChildren().addAll(title, memberListView, memberHint, inputRow, renameMemberBtn, deleteMemberBtn, backBtn);
     }
 
     private void showExpensesPanel() {
