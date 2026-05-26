@@ -10,6 +10,8 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import org.model.*;
 import org.service.BillSplitterService;
@@ -29,7 +31,7 @@ public class Main extends Application {
     private ListView<String> groupListView = new ListView<>();
     private ListView<String> memberListView = new ListView<>();
     private TableView<Expense> expenseListView = new TableView<>();
-    private TextArea balanceTextArea = new TextArea();
+    private VBox balancePanel = new VBox(5);
 
     public static void main(String[] args) {
         launch(args);
@@ -807,8 +809,10 @@ public class Main extends Application {
         Label title = new Label("Balances: " + currentGroup.getName());
         title.getStyleClass().add("panel-title");
 
-        balanceTextArea.setEditable(false);
-        balanceTextArea.setPrefHeight(200);
+        balancePanel.setPrefHeight(200);
+        ScrollPane balanceScroll = new ScrollPane(balancePanel);
+        balanceScroll.setFitToWidth(true);
+        balanceScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         Button calcBtn = new Button("Calculate Balances");
         Button simplifyBtn = new Button("Simplify Debts");
@@ -839,40 +843,58 @@ public class Main extends Application {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) showGroupsPanel();
         });
 
-        mainContent.getChildren().addAll(title, balanceTextArea, calcBtn, simplifyBtn, settleBtn, backBtn);
+        mainContent.getChildren().addAll(title, balanceScroll, calcBtn, simplifyBtn, settleBtn, backBtn);
         calculateBalances(false);
     }
 
     private void calculateBalances(boolean simplify) {
+        balancePanel.getChildren().clear();
         Map<User, Integer> balances = BillSplitterService.calculateBalances(currentGroup);
         if (simplify) {
+            Label header = new Label("Settlement Plan:");
+            header.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+            balancePanel.getChildren().add(header);
             List<String> debts = BillSplitterService.simplifyDebts(balances);
-            StringBuilder sb = new StringBuilder("Settlement Plan:\n\n");
             if (debts.isEmpty()) {
-                sb.append("All settled up!");
+                balancePanel.getChildren().add(new Label("All settled up!"));
             } else {
                 for (String debt : debts) {
-                    sb.append(debt).append("\n");
+                    balancePanel.getChildren().add(new Label(debt));
                 }
             }
-            balanceTextArea.setText(sb.toString());
         } else {
-            StringBuilder sb = new StringBuilder("Individual Balances:\n\n");
+            Label header = new Label("Individual Balances:");
+            header.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+            balancePanel.getChildren().add(header);
+
             for (Map.Entry<User, Integer> entry : balances.entrySet()) {
-                sb.append(String.format("%s: %d NTD %s\n",
-                        entry.getKey().getName(),
-                        entry.getValue(),
-                        entry.getValue() >= 0 ? "(is owed)" : "(owes)"));
+                int amount = entry.getValue();
+                Text namePart = new Text(entry.getKey().getName() + ": ");
+                Text amountPart = new Text(String.valueOf(amount));
+                Text suffixPart;
+                if (amount >= 0) {
+                    amountPart.setFill(javafx.scene.paint.Color.GREEN);
+                    suffixPart = new Text(" NTD (is owed)");
+                } else {
+                    amountPart.setFill(javafx.scene.paint.Color.RED);
+                    suffixPart = new Text(" NTD (owes)");
+                }
+                TextFlow line = new TextFlow(namePart, amountPart, suffixPart);
+                balancePanel.getChildren().add(line);
             }
+
             int total = BillSplitterService.getTotalGroupSpent(currentGroup);
-            sb.append(String.format("\nTotal Group Spending: %d NTD\n", total));
+            Label totalLabel = new Label("\nTotal Group Spending: " + total + " NTD");
+            totalLabel.setStyle("-fx-font-weight: bold;");
+            balancePanel.getChildren().add(totalLabel);
+
             Map<String, Double> catTotals = BillSplitterService.getCategoryTotal(currentGroup);
-            sb.append("\n  Per Category:\n");
+            Label catHeader = new Label("  Per Category:");
+            balancePanel.getChildren().add(catHeader);
             for (Map.Entry<String, Double> cat : catTotals.entrySet()) {
                 if ("Settlement".equals(cat.getKey())) continue;
-                sb.append(String.format("    • %s: %d NTD\n", cat.getKey(), cat.getValue().intValue()));
+                balancePanel.getChildren().add(new Label("    \u2022 " + cat.getKey() + ": " + cat.getValue().intValue() + " NTD"));
             }
-            balanceTextArea.setText(sb.toString());
         }
     }
 
